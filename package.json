@@ -1,0 +1,47 @@
+{
+	"name": "fanadown",
+	"private": true,
+	"version": "0.0.1",
+	"type": "module",
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"preview": "pnpm run build && wrangler dev",
+		"prepare": "svelte-kit sync || echo ''",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"format": "prettier --write .",
+		"lint": "prettier --check . && eslint .",
+		"deploy": "pnpm run build && wrangler deploy",
+		"cf-typegen": "wrangler types ./src/worker-configuration.d.ts"
+	},
+	"devDependencies": {
+		"@eslint/compat": "^1.4.0",
+		"@eslint/js": "^9.38.0",
+		"@sveltejs/adapter-cloudflare": "^7.2.4",
+		"@sveltejs/kit": "^2.47.1",
+		"@sveltejs/vite-plugin-svelte": "^6.2.1",
+		"@tailwindcss/vite": "^4.1.14",
+		"@types/node": "^22",
+		"eslint": "^9.38.0",
+		"eslint-config-prettier": "^10.1.8",
+		"eslint-plugin-svelte": "^3.12.4",
+		"globals": "^16.4.0",
+		"prettier": "^3.6.2",
+		"prettier-plugin-svelte": "^3.4.0",
+		"prettier-plugin-tailwindcss": "^0.7.1",
+		"svelte": "^5.41.0",
+		"svelte-check": "^4.3.3",
+		"tailwindcss": "^4.1.14",
+		"typescript": "^5.9.3",
+		"typescript-eslint": "^8.46.1",
+		"vite": "^7.1.10",
+		"wrangler": "^4.51.0"
+	},
+	"pnpm": {
+		"onlyBuiltDependencies": [
+			"esbuild",
+			"@tailwindcss/oxide"
+		]
+	}
+}
