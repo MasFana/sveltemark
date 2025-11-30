@@ -87,7 +87,18 @@
 	function scrollToHeading(id: string) {
 		const element = document.getElementById(id);
 		if (element) {
-			element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+			// Find the scrollable preview container (the div with overflow)
+			const previewContainer = element.closest('.preview-container');
+			if (previewContainer) {
+				// Calculate position relative to the scroll container
+				const containerRect = previewContainer.getBoundingClientRect();
+				const elementRect = element.getBoundingClientRect();
+				const scrollTop = previewContainer.scrollTop + (elementRect.top - containerRect.top) - 20;
+				previewContainer.scrollTo({
+					top: scrollTop,
+					behavior: 'smooth'
+				});
+			}
 		}
 		// Close TOC on mobile after clicking
 		if (window.innerWidth < 768) {

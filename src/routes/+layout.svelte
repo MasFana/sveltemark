@@ -1,7 +1,29 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
+	import { dev } from '$app/environment';
 	import './layout.css';
 
 	let { children } = $props();
+
+	// Register service worker for offline support
+	onMount(() => {
+		if ('serviceWorker' in navigator) {
+			navigator.serviceWorker.register('/service-worker.js', {
+				type: dev ? 'module' : 'classic'
+			})
+				.then((registration) => {
+					console.log('SW registered:', registration.scope);
+					
+					// Check for updates periodically
+					setInterval(() => {
+						registration.update();
+					}, 60 * 60 * 1000); // Check every hour
+				})
+				.catch((error) => {
+					console.log('SW registration failed:', error);
+				});
+		}
+	});
 
 	// SEO Configuration
 	const siteConfig = {
