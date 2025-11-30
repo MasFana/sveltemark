@@ -146,6 +146,8 @@ This is your **local-first** markdown editor with powerful features.
 ## ✨ Features
 
 - 📂 **File Explorer** - Organize your notes in folders
+- 🖱️ **Drag & Drop** - Reorder files and folders by dragging
+- 📄 **Root-Level Files** - Create files at root or inside folders
 - ✍️ **Live Preview** - See your markdown rendered in real-time
 - 🔄 **Auto-save** - Your work is automatically saved
 - 📊 **Mermaid Diagrams** - Create flowcharts and diagrams
@@ -215,7 +217,10 @@ graph TD
 
 ---
 
-**Tip:** Right-click on files/folders to rename or delete them!
+**Tips:**
+- 🖱️ **Drag & drop** files and folders to reorganize them
+- 📂 **Drop to root** by dragging to the empty area at the bottom of the sidebar
+- 🔧 **Right-click** on files/folders to rename or delete them!
 
 Happy writing! 🚀
 `;

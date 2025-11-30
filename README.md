@@ -46,6 +46,8 @@ Your notes never leave your device. No accounts. No tracking. No cloud.
 ### File Management
 
 - **File Explorer** - Organize notes in folders with tree view
+- **Drag & Drop** - Reorder files and folders by dragging
+- **Root-Level Files** - Create files outside folders at root level
 - **Rename & Delete** - Right-click context menu for file operations
 - **Nested Folders** - Support for hierarchical folder structure
 
@@ -72,7 +74,8 @@ Your notes never leave your device. No accounts. No tracking. No cloud.
 
 ![Preview Mode](images/preview.webp)
 
-### Preview Mode w/ TOC 
+### Preview Mode w/ TOC
+
 ![Preview Mode with TOC](images/tocmenu.webp)
 
 ## Getting Started
@@ -165,7 +168,9 @@ SvelteMark uses **IndexedDB** via Dexie.js for local-first data storage. All you
 ### Database Schema
 
 - **folders**: `id, name, parentId, isOpen`
-- **files**: `id, folderId, title, content, createdAt, updatedAt`
+- **files**: `id, folderId (nullable), title, content, createdAt, updatedAt`
+
+> Note: `folderId` can be `null` for root-level files (files not inside any folder).
 
 ### Export/Import
 
