@@ -1,1 +1,15 @@
-@import 'tailwindcss';
+/* Layout CSS - Ensure full height */
+html,
+body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+}
+
+/* SvelteKit wrapper */
+body>div {
+    height: 100%;
+    width: 100%;
+}
