@@ -114,13 +114,16 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		padding: 10px 12px;
+		padding: 0 12px;
+		height: 41px;
+		min-height: 41px;
 		font-size: 11px;
 		font-weight: 600;
 		text-transform: uppercase;
 		letter-spacing: 0.5px;
 		color: #8b949e;
 		border-bottom: 1px solid #30363d;
+		box-sizing: border-box;
 	}
 
 	.actions {

@@ -1,0 +1,38 @@
+{
+	"name": "SvelteMark - Privacy-First Markdown Editor",
+	"short_name": "SvelteMark",
+	"description": "A privacy-first, open-source, local-only markdown editor built with Svelte 5. Your notes never leave your device.",
+	"start_url": "/",
+	"display": "standalone",
+	"background_color": "#0d1117",
+	"theme_color": "#0d1117",
+	"orientation": "any",
+	"scope": "/",
+	"lang": "en",
+	"categories": ["productivity", "utilities", "education"],
+	"icons": [
+		{
+			"src": "/favicon.svg",
+			"sizes": "any",
+			"type": "image/svg+xml",
+			"purpose": "any"
+		},
+		{
+			"src": "/logo.webp",
+			"sizes": "512x512",
+			"type": "image/webp",
+			"purpose": "any maskable"
+		}
+	],
+	"screenshots": [
+		{
+			"src": "/logo.webp",
+			"sizes": "1200x630",
+			"type": "image/webp",
+			"form_factor": "wide",
+			"label": "SvelteMark Editor"
+		}
+	],
+	"related_applications": [],
+	"prefer_related_applications": false
+}

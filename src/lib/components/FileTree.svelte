@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { FileTreeItem } from '$lib/appState.svelte';
 	import { appState } from '$lib/appState.svelte';
+	import FileTree from './FileTree.svelte';
 
 	interface Props {
 		items: FileTreeItem[];
@@ -122,6 +123,7 @@
 					{/if}
 				</span>
 				{#if renamingItem?.id === item.id}
+					<!-- svelte-ignore a11y_autofocus -->
 					<input
 						type="text"
 						class="rename-input"
@@ -143,7 +145,7 @@
 			</button>
 
 			{#if item.type === 'folder' && item.isOpen && item.children && item.children.length > 0}
-				<svelte:self items={item.children} depth={depth + 1} />
+				<FileTree items={item.children} depth={depth + 1} />
 			{/if}
 		</li>
 	{/each}

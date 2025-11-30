@@ -252,6 +252,7 @@
 			style="width: {sidebarWidth}px;"
 		>
 			<Sidebar />
+			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 			<div 
 				class="resize-handle resize-handle-sidebar"
 				onmousedown={startSidebarResize}
@@ -296,6 +297,7 @@
 							onscroll={handleEditorScroll}
 						/>
 					</div>
+					<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 					<div 
 						class="resize-handle resize-handle-editor"
 						onmousedown={startEditorResize}
@@ -457,6 +459,9 @@
 		justify-content: space-between;
 		background: #161b22;
 		border-bottom: 1px solid #30363d;
+		height: 41px;
+		min-height: 41px;
+		box-sizing: border-box;
 		transition: transform 0.2s ease, opacity 0.2s ease;
 	}
 

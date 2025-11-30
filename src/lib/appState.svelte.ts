@@ -125,6 +125,20 @@ async function initialize(): Promise<void> {
     await refreshData();
     isInitialized = true;
 
+    // Try to restore last opened file from localStorage
+    const lastFileId = typeof localStorage !== 'undefined'
+        ? localStorage.getItem('lastOpenedFileId')
+        : null;
+
+    if (lastFileId) {
+        const fileId = parseInt(lastFileId, 10);
+        const fileExists = files.some(f => f.id === fileId);
+        if (fileExists) {
+            await selectFile(fileId);
+            return;
+        }
+    }
+
     // Auto-select first file if available
     if (files.length > 0 && activeFileId === null) {
         await selectFile(files[0].id!);
@@ -147,6 +161,11 @@ async function selectFile(id: number): Promise<void> {
         activeFileId = id;
         buffer = file.content;
         dirty = false;
+
+        // Persist last opened file to localStorage
+        if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('lastOpenedFileId', String(id));
+        }
     }
 }
 
