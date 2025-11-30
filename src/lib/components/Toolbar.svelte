@@ -5,12 +5,41 @@
 	interface Props {
 		editor?: Editor;
 		onPrint?: () => void;
+		onResetLayout?: () => void;
 	}
 
-	let { editor, onPrint }: Props = $props();
+	let { editor, onPrint, onResetLayout }: Props = $props();
 	let showInsertMenu = $state(false);
 	let showMoreMenu = $state(false);
 	let fileInput: HTMLInputElement;
+
+	// Button refs for dropdown positioning
+	let insertBtnRef = $state<HTMLButtonElement | null>(null);
+	let moreBtnRef = $state<HTMLButtonElement | null>(null);
+
+	// Dropdown position state
+	let insertMenuPos = $state({ top: 0, left: 0 });
+	let moreMenuPos = $state({ top: 0, left: 0, alignRight: false });
+
+	// Calculate dropdown position from button
+	function updateInsertMenuPos() {
+		if (insertBtnRef) {
+			const rect = insertBtnRef.getBoundingClientRect();
+			insertMenuPos = { top: rect.bottom + 4, left: rect.left };
+		}
+	}
+
+	function updateMoreMenuPos() {
+		if (moreBtnRef) {
+			const rect = moreBtnRef.getBoundingClientRect();
+			const alignRight = rect.right > window.innerWidth - 180;
+			moreMenuPos = { 
+				top: rect.bottom + 4, 
+				left: alignRight ? rect.right : rect.left,
+				alignRight 
+			};
+		}
+	}
 
 	function handleBold() {
 		editor?.toggleBold();
@@ -98,6 +127,11 @@
 
 	function toggleAutoHide() {
 		appState.toggleAutoHideUI();
+		closeMenus();
+	}
+
+	function toggleWordWrap() {
+		appState.toggleWordWrap();
 		closeMenus();
 	}
 
@@ -265,9 +299,10 @@
 	<!-- Diagrams (Mermaid) -->
 	<div class="toolbar-group dropdown-wrapper">
 		<button 
+			bind:this={insertBtnRef}
 			class="toolbar-btn dropdown-btn" 
 			title="Insert Diagram" 
-			onclick={(e) => { e.stopPropagation(); showInsertMenu = !showInsertMenu; }}
+			onclick={(e) => { e.stopPropagation(); showInsertMenu = !showInsertMenu; updateInsertMenuPos(); }}
 			disabled={appState.viewOnlyMode}
 		>
 			<svg viewBox="0 0 16 16" fill="currentColor" width="16" height="16">
@@ -278,7 +313,7 @@
 			</svg>
 		</button>
 		{#if showInsertMenu}
-			<div class="dropdown-menu">
+			<div class="dropdown-menu dropdown-menu-fixed" style="top: {insertMenuPos.top}px; left: {insertMenuPos.left}px;">
 				<button class="dropdown-item" onclick={handleMermaid}>
 					<span class="dropdown-icon">📊</span>
 					Basic Diagram
@@ -311,41 +346,23 @@
 
 	<div class="toolbar-divider"></div>
 
-	<!-- View mode toggle -->
-	<div class="toolbar-group">
-		<button 
-			class="toolbar-btn view-toggle" 
-			class:active={appState.viewOnlyMode}
-			title={appState.viewOnlyMode ? 'Switch to Edit Mode' : 'Switch to View Only Mode'}
-			onclick={toggleViewOnly}
-		>
-			{#if appState.viewOnlyMode}
-				<svg viewBox="0 0 16 16" fill="currentColor" width="16" height="16">
-					<path d="M8 2c1.981 0 3.671.992 4.933 2.078 1.27 1.091 2.187 2.345 2.637 3.023a1.62 1.62 0 010 1.798c-.45.678-1.367 1.932-2.637 3.023C11.67 13.008 9.981 14 8 14c-1.981 0-3.671-.992-4.933-2.078C1.797 10.831.88 9.577.43 8.9a1.62 1.62 0 010-1.798c.45-.678 1.367-1.932 2.637-3.023C4.33 2.992 6.019 2 8 2zM1.679 7.932a.12.12 0 000 .136c.411.622 1.241 1.75 2.366 2.717C5.176 11.758 6.527 12.5 8 12.5c1.473 0 2.825-.742 3.955-1.715 1.124-.967 1.954-2.096 2.366-2.717a.12.12 0 000-.136c-.412-.621-1.242-1.75-2.366-2.717C10.824 4.242 9.473 3.5 8 3.5c-1.473 0-2.825.742-3.955 1.715-1.124.967-1.954 2.096-2.366 2.717zM8 10a2 2 0 110-4 2 2 0 010 4z"/>
-				</svg>
-			{:else}
-				<svg viewBox="0 0 16 16" fill="currentColor" width="16" height="16">
-					<path d="M11.013 1.427a1.75 1.75 0 012.474 0l1.086 1.086a1.75 1.75 0 010 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 01-.927-.928l.929-3.25a1.75 1.75 0 01.445-.758l8.61-8.61zm1.414 1.06a.25.25 0 00-.354 0L3.46 11.1a.25.25 0 00-.064.108l-.457 1.6 1.6-.457a.25.25 0 00.108-.064l8.61-8.61a.25.25 0 000-.354l-1.086-1.086z"/>
-				</svg>
-			{/if}
-		</button>
-	</div>
-
-	<div class="toolbar-divider"></div>
-
-	<!-- More menu (Export, Import, Print, Auto-hide) -->
+	<!-- More menu (Export, Import, Print, Auto-hide, Reset Layout) -->
 	<div class="toolbar-group dropdown-wrapper">
 		<button 
+			bind:this={moreBtnRef}
 			class="toolbar-btn dropdown-btn" 
 			title="More options" 
-			onclick={(e) => { e.stopPropagation(); showMoreMenu = !showMoreMenu; }}
+			onclick={(e) => { e.stopPropagation(); showMoreMenu = !showMoreMenu; updateMoreMenuPos(); }}
 		>
 			<svg viewBox="0 0 16 16" fill="currentColor" width="16" height="16">
 				<path d="M8 9a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM1.5 9a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm13 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/>
 			</svg>
 		</button>
 		{#if showMoreMenu}
-			<div class="dropdown-menu dropdown-menu-right">
+			<div 
+				class="dropdown-menu dropdown-menu-fixed" 
+				style="top: {moreMenuPos.top}px; {moreMenuPos.alignRight ? `right: ${window.innerWidth - moreMenuPos.left}px;` : `left: ${moreMenuPos.left}px;`}"
+			>
 				<button class="dropdown-item" onclick={handlePrint}>
 					<svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14">
 						<path d="M5 1a1 1 0 00-1 1v2H3a2 2 0 00-2 2v4a2 2 0 002 2h1v2a1 1 0 001 1h6a1 1 0 001-1v-2h1a2 2 0 002-2V6a2 2 0 00-2-2h-1V2a1 1 0 00-1-1H5zm0 1.5h6v1.5H5V2.5zm-2 4a.5.5 0 11-1 0 .5.5 0 011 0zm2 4.5v3h6v-3H5z"/>
@@ -377,6 +394,23 @@
 						<span class="check-mark">✓</span>
 					{/if}
 				</button>
+				<button class="dropdown-item" onclick={toggleWordWrap}>
+					<svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14">
+						{#if appState.wordWrap}
+							<path d="M10.97 4.97a.75.75 0 011.07 1.05l-3.99 4.99a.75.75 0 01-1.08.02L4.324 8.384a.75.75 0 111.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 01.02-.022z"/>
+						{/if}
+					</svg>
+					Word Wrap
+					{#if appState.wordWrap}
+						<span class="check-mark">✓</span>
+					{/if}
+				</button>
+				<button class="dropdown-item" onclick={() => { onResetLayout?.(); closeMenus(); }}>
+					<svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14">
+						<path d="M5.56 7.56H4.5a.5.5 0 000 1h2a.5.5 0 00.5-.5v-2a.5.5 0 00-1 0v.59c-.41-.59-.97-1.06-1.63-1.37A4.5 4.5 0 001 9.5a4.5 4.5 0 004.5 4.5 4.5 4.5 0 004.4-3.5H8.86a3.5 3.5 0 01-6.72 0A3.5 3.5 0 015.5 6.5c.53 0 1.03.12 1.48.32l.58-.74zM8 1.5a6.5 6.5 0 016.5 6.5 6.5 6.5 0 01-.15 1.38l-.97-.24c.08-.37.12-.75.12-1.14a5.5 5.5 0 00-11 0c0 .39.04.77.12 1.14l-.97.24A6.5 6.5 0 011.5 8 6.5 6.5 0 018 1.5z"/>
+					</svg>
+					Reset Layout
+				</button>
 				<div class="dropdown-divider"></div>
 				<button class="dropdown-item" onclick={handleHelp}>
 					<svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14">
@@ -396,12 +430,23 @@
 		gap: 4px;
 		padding: 6px 12px;
 		background: #161b22;
-		flex-wrap: wrap;
+		flex: 1;
+		min-width: 0;
+		overflow-x: auto;
+		overflow-y: visible;
+		scrollbar-width: none;
+		-ms-overflow-style: none;
+		position: relative;
+	}
+
+	.toolbar::-webkit-scrollbar {
+		display: none;
 	}
 
 	.toolbar-group {
 		display: flex;
 		gap: 2px;
+		flex-shrink: 0;
 	}
 
 	.toolbar-divider {
@@ -409,6 +454,7 @@
 		height: 20px;
 		background: #30363d;
 		margin: 0 6px;
+		flex-shrink: 0;
 	}
 
 	.toolbar-btn {
@@ -438,11 +484,6 @@
 		cursor: not-allowed;
 	}
 
-	.toolbar-btn.view-toggle.active {
-		background: #238636;
-		color: #ffffff;
-	}
-
 	.text-btn {
 		font-size: 11px;
 		font-weight: 600;
@@ -451,6 +492,7 @@
 	/* Dropdown styles */
 	.dropdown-wrapper {
 		position: relative;
+		z-index: 1000;
 	}
 
 	.dropdown-btn {
@@ -474,12 +516,12 @@
 		padding: 4px 0;
 		min-width: 160px;
 		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-		z-index: 100;
+		z-index: 1000;
 	}
 
-	.dropdown-menu-right {
-		left: auto;
-		right: 0;
+	.dropdown-menu-fixed {
+		position: fixed;
+		margin-top: 0;
 	}
 
 	.dropdown-item {
@@ -520,5 +562,70 @@
 	.dropdown-icon {
 		width: 20px;
 		text-align: center;
+	}
+
+	/* Responsive toolbar - hide less important items on smaller screens */
+	@media (max-width: 900px) {
+		/* Hide H3 and some dividers */
+		.toolbar-group:nth-child(4) button:nth-child(3) {
+			display: none;
+		}
+	}
+
+	@media (max-width: 768px) {
+		.toolbar {
+			padding: 4px 0;
+			gap: 2px;
+		}
+
+		.toolbar-divider {
+			margin: 0 2px;
+		}
+
+		.toolbar-btn {
+			width: 26px;
+			height: 26px;
+		}
+	}
+
+	@media (max-width: 600px) {
+		.toolbar {
+			padding: 4px 0;
+			gap: 1px;
+		}
+
+		.toolbar-btn {
+			width: 24px;
+			height: 24px;
+		}
+
+		.toolbar-divider {
+			margin: 0 2px;
+			height: 16px;
+		}
+
+		.text-btn {
+			font-size: 10px;
+		}
+	}
+
+	@media (max-width: 480px) {
+		.toolbar {
+			padding: 2px 0;
+		}
+
+		.toolbar-btn {
+			width: 22px;
+			height: 22px;
+		}
+
+		.dropdown-btn {
+			padding: 0 4px;
+		}
+
+		.dropdown-arrow {
+			width: 8px;
+			height: 8px;
+		}
 	}
 </style>

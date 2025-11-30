@@ -10,6 +10,7 @@
 	import { searchKeymap, highlightSelectionMatches } from '@codemirror/search';
 	import { lintKeymap } from '@codemirror/lint';
 	import { tags } from '@lezer/highlight';
+	import { appState } from '$lib/appState.svelte';
 
 	interface Props {
 		value?: string;
@@ -25,8 +26,9 @@
 	let isUpdating = false;
 	let isSyncingScroll = false;
 
-	// Theme compartment for dynamic switching
+	// Compartments for dynamic switching
 	const themeCompartment = new Compartment();
+	const wordWrapCompartment = new Compartment();
 
 	// GitHub Dark theme colors
 	const githubDarkTheme = EditorView.theme({
@@ -201,6 +203,9 @@
 				syntaxHighlighting(githubDarkHighlightStyle)
 			]),
 
+			// Word wrap (dynamic)
+			wordWrapCompartment.of(appState.wordWrap ? EditorView.lineWrapping : []),
+
 			// Update listener for doc changes only
 			EditorView.updateListener.of((update) => {
 				if (update.docChanged && !isUpdating) {
@@ -254,6 +259,15 @@
 				}
 			});
 			isUpdating = false;
+		}
+	});
+
+	// Update word wrap when setting changes
+	$effect(() => {
+		if (view) {
+			view.dispatch({
+				effects: wordWrapCompartment.reconfigure(appState.wordWrap ? EditorView.lineWrapping : [])
+			});
 		}
 	});
 

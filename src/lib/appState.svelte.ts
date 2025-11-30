@@ -34,8 +34,9 @@ let isSaving = $state<boolean>(false);
 let folders = $state<Folder[]>([]);
 let files = $state<File[]>([]);
 let isInitialized = $state<boolean>(false);
-let viewOnlyMode = $state<boolean>(false);
+let viewOnlyMode = $state<boolean>(typeof localStorage !== 'undefined' ? localStorage.getItem('viewOnlyMode') === 'true' : false);
 let autoHideUI = $state<boolean>(typeof localStorage !== 'undefined' ? localStorage.getItem('autoHideUI') === 'true' : false);
+let wordWrap = $state<boolean>(typeof localStorage !== 'undefined' ? localStorage.getItem('wordWrap') !== 'false' : true);
 
 // Debounce timer
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -259,10 +260,16 @@ async function renameFolder(id: number, newName: string): Promise<void> {
 
 function toggleViewOnlyMode(): void {
     viewOnlyMode = !viewOnlyMode;
+    if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('viewOnlyMode', String(viewOnlyMode));
+    }
 }
 
 function setViewOnlyMode(value: boolean): void {
     viewOnlyMode = value;
+    if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('viewOnlyMode', String(viewOnlyMode));
+    }
 }
 
 function toggleAutoHideUI(): void {
@@ -276,6 +283,20 @@ function setAutoHideUI(value: boolean): void {
     autoHideUI = value;
     if (typeof localStorage !== 'undefined') {
         localStorage.setItem('autoHideUI', String(autoHideUI));
+    }
+}
+
+function toggleWordWrap(): void {
+    wordWrap = !wordWrap;
+    if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('wordWrap', String(wordWrap));
+    }
+}
+
+function setWordWrap(value: boolean): void {
+    wordWrap = value;
+    if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('wordWrap', String(wordWrap));
     }
 }
 
@@ -423,6 +444,9 @@ export const appState = {
     get autoHideUI() {
         return autoHideUI;
     },
+    get wordWrap() {
+        return wordWrap;
+    },
 
     // Actions
     initialize,
@@ -441,6 +465,8 @@ export const appState = {
     setViewOnlyMode,
     toggleAutoHideUI,
     setAutoHideUI,
+    toggleWordWrap,
+    setWordWrap,
     exportBackup,
     importBackup,
     printCurrentFile,
