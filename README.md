@@ -72,6 +72,9 @@ Your notes never leave your device. No accounts. No tracking. No cloud.
 
 ![Preview Mode](images/preview.webp)
 
+### Preview Mode w/ TOC 
+![Preview Mode with TOC](images/tocmenu.webp)
+
 ## Getting Started
 
 ### Prerequisites
