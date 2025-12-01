@@ -820,6 +820,7 @@
 
 	/* Editor/Preview wrapper with TOC */
 	.editor-preview-wrapper {
+		background-color: #0d1117;
 		flex: 1;
 		display: flex;
 		overflow: hidden;
