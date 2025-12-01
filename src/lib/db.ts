@@ -149,9 +149,11 @@ This is your **local-first** markdown editor with powerful features.
 - 🖱️ **Drag & Drop** - Reorder files and folders by dragging
 - 📄 **Root-Level Files** - Create files at root or inside folders
 - ✍️ **Live Preview** - See your markdown rendered in real-time
+- ⚡ **Fine-Grained Updates** - Only changed blocks re-render for smooth typing
 - 🔄 **Auto-save** - Your work is automatically saved
 - 📊 **Mermaid Diagrams** - Create flowcharts and diagrams
-- 🧮 **Math Support** - Write equations with KaTeX
+- 🧲 **Math Support** - Write equations with KaTeX
+- 📋 **Copy Code** - Click to copy code blocks
 - 🖨️ **Print** - Print your documents (Ctrl+P)
 - 💾 **Export/Import** - Backup and restore your notes
 - 👁️ **View-Only Mode** - Focus on reading

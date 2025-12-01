@@ -53,9 +53,10 @@
 	// Render mermaid diagrams for newly added/updated blocks
 	$effect(() => {
 		if (blocks.length > 0 && previewContainer) {
-			// Use tick to ensure DOM is updated, then render mermaid
+			// Use tick to ensure DOM is updated, then render mermaid and add copy buttons
 			tick().then(() => {
 				renderMermaidDiagrams();
+				addCopyButtons();
 			});
 		}
 	});
@@ -78,6 +79,51 @@
 					div.setAttribute('data-rendered', 'true');
 				}
 			}
+		}
+	}
+
+	// Add copy buttons to code blocks
+	function addCopyButtons() {
+		if (!previewContainer) return;
+		
+		const codeBlocks = previewContainer.querySelectorAll('pre:not([data-copy-added])');
+		for (const pre of codeBlocks) {
+			// Skip mermaid blocks
+			if (pre.closest('.mermaid')) continue;
+			
+			pre.setAttribute('data-copy-added', 'true');
+			
+			// Create wrapper for positioning
+			const wrapper = document.createElement('div');
+			wrapper.className = 'code-block-wrapper';
+			pre.parentNode?.insertBefore(wrapper, pre);
+			wrapper.appendChild(pre);
+			
+			// Create copy button
+			const copyBtn = document.createElement('button');
+			copyBtn.className = 'copy-code-btn';
+			copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+			copyBtn.title = 'Copy code';
+			
+			copyBtn.addEventListener('click', async () => {
+				const code = pre.querySelector('code');
+				const text = code?.textContent || pre.textContent || '';
+				
+				try {
+					await navigator.clipboard.writeText(text);
+					copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+					copyBtn.classList.add('copied');
+					
+					setTimeout(() => {
+						copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+						copyBtn.classList.remove('copied');
+					}, 2000);
+				} catch (err) {
+					console.error('Failed to copy:', err);
+				}
+			});
+			
+			wrapper.appendChild(copyBtn);
 		}
 	}
 
@@ -326,5 +372,53 @@
 	/* Task list styling */
 	.preview-container :global(input[type='checkbox']) {
 		margin-right: 8px;
+	}
+
+	/* Code block copy button */
+	.preview-container :global(.code-block-wrapper) {
+		position: relative;
+		margin: 16px 0;
+	}
+
+	.preview-container :global(.code-block-wrapper pre) {
+		margin: 0;
+	}
+
+	.preview-container :global(.copy-code-btn) {
+		position: absolute;
+		top: 8px;
+		right: 8px;
+		padding: 6px 8px;
+		background: #30363d;
+		border: 1px solid #484f58;
+		border-radius: 6px;
+		color: #8b949e;
+		cursor: pointer;
+		opacity: 0;
+		transition: opacity 0.2s, background 0.2s, color 0.2s;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 10;
+	}
+
+	.preview-container :global(.code-block-wrapper:hover .copy-code-btn) {
+		opacity: 1;
+	}
+
+	.preview-container :global(.copy-code-btn:hover) {
+		background: #484f58;
+		color: #c9d1d9;
+	}
+
+	.preview-container :global(.copy-code-btn.copied) {
+		background: #238636;
+		color: #ffffff;
+		border-color: #3fb950;
+	}
+
+	.preview-container :global(.copy-code-btn svg) {
+		width: 16px;
+		height: 16px;
 	}
 </style>

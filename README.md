@@ -40,6 +40,7 @@ Your notes never leave your device. No accounts. No tracking. No cloud.
 
 - **CodeMirror 6 Editor** - Powerful text editing with syntax highlighting
 - **Live Preview** - Real-time markdown rendering with GitHub styling
+- **Fine-Grained Reactivity** - Block-based rendering that only updates changed sections
 - **Scroll Sync** - Proportional scroll synchronization between editor and preview
 - **Auto-save** - Automatic saving with debounced updates
 
@@ -49,6 +50,7 @@ Your notes never leave your device. No accounts. No tracking. No cloud.
 - **Math Equations** - LaTeX math rendering with KaTeX
 - **Mermaid Diagrams** - Flowcharts, sequence diagrams, pie charts
 - **Syntax Highlighting** - Code block highlighting for 100+ languages
+- **Copy Code Button** - One-click copy for code blocks
 
 ### File Management
 
