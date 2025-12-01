@@ -8,7 +8,7 @@ A **privacy-first**, **open-source**, **local-only** markdown editor built with 
 
 Your notes never leave your device. No accounts. No tracking. No cloud.
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-sveltemark.fana.my.id-58a6ff?style=for-the-badge)](https://sveltemark.fana.my.id)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-sveltemark.fana.my.id-58a6ff?style=for-the-badge)](https://sm.fana.my.id)
 [![License](https://img.shields.io/badge/License-MIT-3fb950?style=for-the-badge)](LICENSE)
 [![Svelte](https://img.shields.io/badge/Svelte-5-ff3e00?style=for-the-badge&logo=svelte&logoColor=white)](https://svelte.dev/)
 
