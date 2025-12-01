@@ -29,6 +29,13 @@ Your notes never leave your device. No accounts. No tracking. No cloud.
 - **No Account Required** - Start writing immediately, no sign-up
 - **Export Your Data** - Full data portability with JSON backup
 
+### Offline Support
+
+- **Full PWA Support** - Install as a native app on desktop and mobile
+- **Works Offline** - Continue writing even without internet connection
+- **Service Worker Caching** - All app assets cached for instant loading
+- **Auto-Sync Updates** - Automatically updates when new versions are available
+
 ### Core Editor
 
 - **CodeMirror 6 Editor** - Powerful text editing with syntax highlighting
@@ -134,6 +141,7 @@ pnpm preview
 - **Diagrams**: [Mermaid](https://mermaid.js.org/)
 - **Styling**: [github-markdown-css](https://github.com/sindresorhus/github-markdown-css)
 - **Deployment**: [Cloudflare Pages](https://pages.cloudflare.com/) (optional)
+- **Offline**: Service Worker with cache-first strategy for PWA support
 
 ## Project Structure
 
@@ -151,6 +159,7 @@ fanadown/
 │   │   ├── db.ts                  # Dexie database operations
 │   │   ├── markdown.ts            # Markdown processing pipeline
 │   │   └── index.ts               # Library exports
+│   ├── service-worker.ts          # PWA offline caching
 │   └── routes/
 │       ├── +layout.svelte         # App layout
 │       └── +page.svelte           # Main page
@@ -184,6 +193,31 @@ To restore:
 
 1. Click **Import Backup**
 2. Select your backup JSON file
+
+## Offline Mode
+
+SvelteMark works fully offline as a Progressive Web App (PWA).
+
+### How It Works
+
+- **Service Worker**: Caches all app assets on first visit
+- **Cache-First Strategy**: Assets are served from cache instantly
+- **Background Updates**: New versions are fetched automatically when online
+- **Data Persistence**: Your notes are stored locally in IndexedDB
+
+### Installing as PWA
+
+1. Visit the app in Chrome, Edge, or Safari
+2. Click the install icon in the address bar (or "Add to Home Screen" on mobile)
+3. Launch from your desktop or home screen
+4. Works offline - no internet required!
+
+### Notes
+
+- First visit requires internet to download the app
+- After installation, the app works completely offline
+- Updates are applied automatically when you're back online
+- All data stays local - nothing is sent to servers even when online
 
 ## Theming
 

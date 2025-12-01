@@ -156,6 +156,18 @@ This is your **local-first** markdown editor with powerful features.
 - 💾 **Export/Import** - Backup and restore your notes
 - 👁️ **View-Only Mode** - Focus on reading
 - 🔲 **Auto-Hide UI** - Distraction-free writing
+- 📴 **Works Offline** - Full PWA support, no internet required
+
+## 📴 Offline Support
+
+SvelteMark works completely offline! After your first visit:
+
+- ✅ All app assets are cached locally
+- ✅ Your notes are stored in IndexedDB
+- ✅ No internet connection needed
+- ✅ Install as a desktop/mobile app
+
+**To install:** Click the install icon in your browser's address bar or "Add to Home Screen" on mobile.
 
 ## ⌨️ Keyboard Shortcuts
 
@@ -208,6 +220,7 @@ graph TD
 - [x] Create markdown editor
 - [x] Add live preview
 - [x] Support syntax highlighting
+- [x] Add offline support
 - [ ] Add more features
 
 ### Blockquotes
@@ -221,6 +234,7 @@ graph TD
 - 🖱️ **Drag & drop** files and folders to reorganize them
 - 📂 **Drop to root** by dragging to the empty area at the bottom of the sidebar
 - 🔧 **Right-click** on files/folders to rename or delete them!
+- 📴 **Works offline** after first visit - install as an app!
 
 Happy writing! 🚀
 `;
