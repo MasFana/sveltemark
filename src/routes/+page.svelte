@@ -236,7 +236,7 @@
 		// Build anchor points: each section start/end maps to corresponding position
 		const anchors: Array<{ editorOffset: number; previewOffset: number }> = [];
 		
-		// Always start with 0,0 anchor to handle top of document
+		// Always start with 0,0 anchor to handle scrolling above first content
 		anchors.push({ editorOffset: 0, previewOffset: 0 });
 		
 		const numSections = Math.min(editorSections.length, previewSections.length);
@@ -244,15 +244,11 @@
 			const eDim = editorSections[i].editorDimension;
 			const pDim = previewSections[i].previewDimension;
 			
-			// Add start of section as anchor (skip if same as previous)
-			if (anchors.length === 0 || 
-				eDim.startOffset !== anchors[anchors.length - 1].editorOffset ||
-				pDim.startOffset !== anchors[anchors.length - 1].previewOffset) {
-				anchors.push({
-					editorOffset: eDim.startOffset,
-					previewOffset: pDim.startOffset
-				});
-			}
+			// Add start of section as anchor
+			anchors.push({
+				editorOffset: eDim.startOffset,
+				previewOffset: pDim.startOffset
+			});
 			
 			// Add end of section as anchor
 			anchors.push({
@@ -261,7 +257,20 @@
 			});
 		}
 		
-		return anchors;
+		// Sort anchors by editor offset to ensure proper order
+		anchors.sort((a, b) => a.editorOffset - b.editorOffset);
+		
+		// Remove duplicate editor offsets (keep first occurrence)
+		const uniqueAnchors: typeof anchors = [];
+		let lastEditorOffset = -1;
+		for (const anchor of anchors) {
+			if (anchor.editorOffset !== lastEditorOffset) {
+				uniqueAnchors.push(anchor);
+				lastEditorOffset = anchor.editorOffset;
+			}
+		}
+		
+		return uniqueAnchors;
 	}
 
 	// Interpolate scroll position using anchor map
@@ -275,21 +284,29 @@
 		const sourceKey = fromEditor ? 'editorOffset' : 'previewOffset';
 		const targetKey = fromEditor ? 'previewOffset' : 'editorOffset';
 		
-		// Handle scroll at or before first anchor
-		if (scrollTop <= anchors[0][sourceKey]) {
-			return anchors[0][targetKey];
+		// Create a sorted view based on source key for proper lookup
+		const sortedAnchors = [...anchors].sort((a, b) => a[sourceKey] - b[sourceKey]);
+		
+		// Handle scroll at or before first anchor - return 0 to scroll to top
+		if (scrollTop <= sortedAnchors[0][sourceKey]) {
+			// Proportionally map to target based on first content anchor
+			if (sortedAnchors.length >= 2 && sortedAnchors[0][sourceKey] > 0) {
+				const ratio = scrollTop / sortedAnchors[0][sourceKey];
+				return sortedAnchors[0][targetKey] * ratio;
+			}
+			return 0;
 		}
 		
 		// Handle scroll at or after last anchor
-		const lastAnchor = anchors[anchors.length - 1];
+		const lastAnchor = sortedAnchors[sortedAnchors.length - 1];
 		if (scrollTop >= lastAnchor[sourceKey]) {
 			return lastAnchor[targetKey];
 		}
 		
 		// Find the two anchors we're between
-		for (let i = 0; i < anchors.length - 1; i++) {
-			const a1 = anchors[i];
-			const a2 = anchors[i + 1];
+		for (let i = 0; i < sortedAnchors.length - 1; i++) {
+			const a1 = sortedAnchors[i];
+			const a2 = sortedAnchors[i + 1];
 			
 			if (scrollTop >= a1[sourceKey] && scrollTop <= a2[sourceKey]) {
 				// Linear interpolation between anchors
@@ -300,7 +317,7 @@
 		}
 		
 		// Fallback (shouldn't reach here)
-		return scrollTop;
+		return 0;
 	}
 
 	// Real-time section-based scroll sync: Editor → Preview
@@ -412,6 +429,7 @@
 						font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
 						background: white;
 						color: #24292f;
+						padding-top: 0 !important;
 					}
 					pre, code {
 						background: #f6f8fa !important;
@@ -425,37 +443,34 @@
 						position: static;
 						margin: 16px 0;
 					}
+					/* Fix pre tag wrapping Mermaid - neutralize whitespace preservation */
+					.code-block-wrapper pre:has(.mermaid),
+					pre:has(.mermaid) {
+						white-space: normal !important;
+						background: transparent !important;
+						border: none !important;
+						padding: 0 !important;
+						margin: 0 !important;
+						overflow: visible !important;
+					}
 					/* Mermaid diagram styling for print */
 					.mermaid {
 						text-align: center;
-						margin: 16px 0;
+						margin: 1em 0 !important;
 						padding: 0 !important;
 						background: transparent;
-						page-break-inside: avoid;
-						overflow: visible;
+						page-break-inside: auto;
+						overflow: visible !important;
+						height: auto !important;
+						width: 100% !important;
 					}
 					.mermaid svg {
 						max-width: 100% !important;
-						width: auto !important;
+						width: 100% !important;
 						height: auto !important;
+						max-height: 100% !important;
 						display: block;
 						margin: 0 auto;
-					}
-					/* Remove Mermaid's default max-width which can be huge */
-					.mermaid svg[style*="max-width"] {
-						max-width: 100% !important;
-					}
-					/* Remove excessive padding from Mermaid SVG elements */
-					.mermaid svg [style*="padding"] {
-						padding: 0 !important;
-					}
-					/* Fix for Mermaid SVG container elements */
-					.mermaid svg > g {
-						transform: none !important;
-					}
-					/* Remove any negative margins that might cause offset */
-					.mermaid * {
-						margin-top: 0 !important;
 					}
 					/* KaTeX display math styling */
 					.katex-display {
@@ -478,13 +493,22 @@
 						.katex-display {
 							page-break-inside: avoid;
 						}
+						/* Reset the pre tag to remove whitespace/padding issues */
+						.code-block-wrapper pre {
+							white-space: normal !important;
+							background: transparent !important;
+							border: none !important;
+						}
 						.mermaid {
 							page-break-inside: avoid;
-							margin: 12px 0;
+							margin: 1em 0 !important;
 							padding: 0 !important;
+							height: auto !important;
 						}
 						.mermaid svg {
 							max-width: 100% !important;
+							width: 100% !important;
+							height: auto !important;
 						}
 					}
 				</style>

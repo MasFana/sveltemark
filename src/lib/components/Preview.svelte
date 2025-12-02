@@ -14,6 +14,7 @@
 	let previewContainer: HTMLDivElement;
 	let blocks = $state<MarkdownBlock[]>([]);
 	let isSyncingScroll = false;
+	let isRendering = false; // Flag to block scroll sync during re-render
 	let processingTimeout: ReturnType<typeof setTimeout> | null = null;
 
 	// Section dimensions for smart scroll sync
@@ -72,12 +73,20 @@
 	// Render mermaid diagrams for newly added/updated blocks
 	$effect(() => {
 		if (blocks.length > 0 && previewContainer) {
+			// Block scroll sync during rendering
+			isRendering = true;
+			
 			// Use tick to ensure DOM is updated, then render mermaid and add copy buttons
 			tick().then(async () => {
 				await renderMermaidDiagrams();
 				addCopyButtons();
 				// Measure section dimensions after all rendering is complete
 				measureSectionDimensions();
+				
+				// Re-enable scroll sync after a short delay to let things settle
+				setTimeout(() => {
+					isRendering = false;
+				}, 100);
 			});
 		}
 	});
@@ -88,6 +97,10 @@
 
 		const blockElements = previewContainer.querySelectorAll('.markdown-block');
 		const newSectionInfoList: SectionInfo[] = [];
+		
+		// Get container's scroll position and bounding rect for accurate measurements
+		const containerRect = previewContainer.getBoundingClientRect();
+		const scrollTop = previewContainer.scrollTop;
 
 		blocks.forEach((block, index) => {
 			const element = blockElements[index] as HTMLElement;
@@ -100,14 +113,18 @@
 				let endOffset = 0;
 				
 				if (firstChild && lastChild) {
-					// Get the actual visual bounds
-					startOffset = firstChild.offsetTop;
-					// For the end, we need to account for the full height of the last child
-					endOffset = lastChild.offsetTop + lastChild.offsetHeight;
+					// Use getBoundingClientRect for accurate positions including margins
+					const firstRect = firstChild.getBoundingClientRect();
+					const lastRect = lastChild.getBoundingClientRect();
+					
+					// Convert to scroll-relative positions
+					startOffset = firstRect.top - containerRect.top + scrollTop;
+					endOffset = lastRect.bottom - containerRect.top + scrollTop;
 				} else if (element.offsetHeight > 0) {
 					// Fallback for non-contents elements
-					startOffset = element.offsetTop;
-					endOffset = element.offsetTop + element.offsetHeight;
+					const rect = element.getBoundingClientRect();
+					startOffset = rect.top - containerRect.top + scrollTop;
+					endOffset = rect.bottom - containerRect.top + scrollTop;
 				}
 
 				newSectionInfoList.push({
@@ -192,7 +209,8 @@
 
 	// Handle scroll events for scroll sync (section-based)
 	function handleScroll() {
-		if (!previewContainer || !onscroll || isSyncingScroll) return;
+		// Don't emit scroll events while rendering or syncing
+		if (!previewContainer || !onscroll || isSyncingScroll || isRendering) return;
 
 		onscroll({
 			scrollTop: previewContainer.scrollTop,
@@ -320,7 +338,8 @@
 
 	// Scroll to a specific section and position within it (for section-based sync)
 	export function scrollToSection(sectionIdx: number, posInSection: number, animate: boolean = true) {
-		if (!previewContainer || sectionInfoList.length === 0) return;
+		// Don't scroll while rendering - dimensions are unstable
+		if (!previewContainer || sectionInfoList.length === 0 || isRendering) return;
 
 		const section = sectionInfoList[Math.min(sectionIdx, sectionInfoList.length - 1)];
 		if (!section) return;
@@ -338,7 +357,8 @@
 
 	// Method to scroll to a specific pixel offset (for anchor-based sync)
 	export function scrollToOffset(offset: number) {
-		if (!previewContainer) return;
+		// Don't scroll while rendering - dimensions are unstable
+		if (!previewContainer || isRendering) return;
 		const clampedOffset = Math.max(0, Math.min(offset, 
 			previewContainer.scrollHeight - previewContainer.clientHeight));
 		isSyncingScroll = true;
@@ -378,7 +398,8 @@
 
 	// Method to scroll by percentage (fallback for proportional scroll sync)
 	export function scrollToPercent(percent: number) {
-		if (!previewContainer) return;
+		// Don't scroll while rendering - dimensions are unstable
+		if (!previewContainer || isRendering) return;
 		const maxScroll = previewContainer.scrollHeight - previewContainer.clientHeight;
 		// Direct scroll - feedback prevention handled by scrollSource in parent
 		isSyncingScroll = true;
@@ -601,9 +622,9 @@
 	/* Mermaid diagram styling */
 	.preview-container :global(.mermaid) {
 		background: #161b22;
-		padding: 16px;
+		padding: 0;
 		border-radius: 6px;
-		margin: 16px 0;
+		margin: 0 0 16px 0;
 		text-align: center;
 	}
 
