@@ -23,22 +23,137 @@ function rehypeSourceLines() {
     };
 }
 
+// Transform mermaid node labels to use markdown strings for auto text wrapping
+// This wraps text in backticks like "`text`" to enable automatic text wrapping
+function transformMermaidForAutoWrap(code: string): string {
+
+    // Process each line to handle node definitions
+    const lines = code.split('\n');
+    let inFrontmatter = false;
+
+    const processedLines = lines.map((line) => {
+        const trimmedLine = line.trim();
+
+        // Track frontmatter state
+        if (trimmedLine === '---') {
+            inFrontmatter = !inFrontmatter;
+            return line;
+        }
+
+        // Skip lines in frontmatter, comments, or already have markdown strings
+        if (inFrontmatter || trimmedLine.startsWith('%%') || line.includes('"`')) {
+            return line;
+        }
+
+        let processedLine = line;
+
+        // Process square brackets [text] - most common
+        // Match: A[text] but not A["`text`"] or A["text"]
+        processedLine = processedLine.replace(/(\b\w+)\[([^\]"'`]+)\]/g, (match, id, text) => {
+            // Skip if text is a link syntax or icon
+            if (text.startsWith('fa:') || text.startsWith('fab:') || text.startsWith('fas:')) return match;
+            return `${id}["\`${text}\`"]`;
+        });
+
+        // Process parentheses (text) for rounded nodes
+        // Match: A(text) but not A((text)) or A("`text`")
+        processedLine = processedLine.replace(/(\b\w+)\(([^()"'`]+)\)(?!\))/g, (match, id, text) => {
+            // Skip if it looks like a subgraph reference
+            if (text.startsWith('[') || text.includes('|')) return match;
+            return `${id}("\`${text}\`")`;
+        });
+
+        // Process curly braces {text} for diamond/decision nodes
+        // Match: A{text} but not A{{text}}
+        processedLine = processedLine.replace(/(\b\w+)\{([^{}"'`]+)\}(?!\})/g, (match, id, text) => {
+            return `${id}{"\`${text}\`"}`;
+        });
+
+        // Process stadium shape ([text])
+        processedLine = processedLine.replace(/(\b\w+)\(\[([^\]"'`]+)\]\)/g, (match, id, text) => {
+            return `${id}(["\`${text}\`"])`;
+        });
+
+        // Process subroutine [[text]]
+        processedLine = processedLine.replace(/(\b\w+)\[\[([^\]"'`]+)\]\]/g, (match, id, text) => {
+            return `${id}[["\`${text}\`"]]`;
+        });
+
+        // Process hexagon {{text}}
+        processedLine = processedLine.replace(/(\b\w+)\{\{([^}"'`]+)\}\}/g, (match, id, text) => {
+            return `${id}{{"\`${text}\`"}}`;
+        });
+
+        // Process double circle (((text)))
+        processedLine = processedLine.replace(/(\b\w+)\(\(\(([^)"'`]+)\)\)\)/g, (match, id, text) => {
+            return `${id}((("\`${text}\`")))`;
+        });
+
+        return processedLine;
+    });
+
+    const result = processedLines.join('\n');
+
+    return result;
+}
+
 // Custom plugin to handle mermaid code blocks
 function remarkMermaid() {
     return (tree: MdastRoot) => {
         visit(tree, 'code', (node: { lang?: string | null; meta?: string | null; value: string; type: string; data?: { hName?: string; hProperties?: Record<string, unknown> } }) => {
             if (node.lang === 'mermaid') {
+                // Transform mermaid code to use markdown strings for auto text wrapping
+                const transformedCode = transformMermaidForAutoWrap(node.value);
+
                 // Transform to a div that will be processed by mermaid.js client-side
                 node.type = 'code';
                 node.data = node.data || {};
                 node.data.hName = 'div';
                 node.data.hProperties = {
                     className: ['mermaid'],
-                    'data-mermaid': node.value
+                    'data-mermaid': transformedCode
                 };
             }
         });
     };
+}
+
+// Preprocess markdown to convert inline $$...$$ on its own line to proper block math
+// remark-math treats inline $$...$$ as text math, but users often expect it to be display math
+function preprocessDisplayMath(markdown: string): string {
+    // Split into lines
+    const lines = markdown.split('\n');
+    const result: string[] = [];
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const trimmed = line.trim();
+
+        // Get the leading whitespace/indentation to preserve it
+        const leadingWhitespace = line.match(/^(\s*)/)?.[1] || '';
+
+        // Check if the line is primarily a $$...$$ math expression
+        // Pattern: line that starts and ends with $$ with content in between
+        // This handles cases like: $$ x = 1 $$ or $$\frac{1}{2}$$
+        const inlineDisplayMatch = trimmed.match(/^\$\$(.+)\$\$$/);
+
+        if (inlineDisplayMatch) {
+            // Check if this is truly a single $$...$$ expression (exactly 2 $$ sequences)
+            const dollarMatches = trimmed.match(/\$\$/g);
+            if (dollarMatches && dollarMatches.length === 2) {
+                // Convert to proper block math, preserving indentation
+                const mathContent = inlineDisplayMatch[1].trim();
+                result.push(leadingWhitespace + '$$');
+                result.push(leadingWhitespace + mathContent);
+                result.push(leadingWhitespace + '$$');
+                continue;
+            }
+        }
+
+        result.push(line);
+    }
+
+    return result.join('\n');
 }
 
 // Create the unified processor
@@ -130,7 +245,9 @@ export function splitIntoBlocks(markdown: string): { source: string; startLine: 
  */
 export async function processBlock(source: string): Promise<string> {
     if (!source.trim()) return '';
-    const result = await blockProcessor.process(source);
+    // Preprocess to handle inline $$...$$ as display math
+    const preprocessed = preprocessDisplayMath(source);
+    const result = await blockProcessor.process(preprocessed);
     return String(result);
 }
 
@@ -200,7 +317,9 @@ export function diffBlocks(oldBlocks: MarkdownBlock[], newBlocks: MarkdownBlock[
  * Process markdown string to HTML (legacy full render)
  */
 export async function processMarkdown(markdown: string): Promise<string> {
-    const result = await processor.process(markdown);
+    // Preprocess to handle inline $$...$$ as display math
+    const preprocessed = preprocessDisplayMath(markdown);
+    const result = await processor.process(preprocessed);
     return String(result);
 }
 
@@ -208,7 +327,9 @@ export async function processMarkdown(markdown: string): Promise<string> {
  * Synchronous version for when async isn't needed
  */
 export function processMarkdownSync(markdown: string): string {
-    const result = processor.processSync(markdown);
+    // Preprocess to handle inline $$...$$ as display math
+    const preprocessed = preprocessDisplayMath(markdown);
+    const result = processor.processSync(preprocessed);
     return String(result);
 }
 

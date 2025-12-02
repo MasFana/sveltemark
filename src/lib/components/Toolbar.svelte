@@ -135,6 +135,11 @@
 		closeMenus();
 	}
 
+	function toggleSyncScroll() {
+		appState.toggleSyncScroll();
+		closeMenus();
+	}
+
 	async function handleExport() {
 		const backup = await appState.exportBackup();
 		const blob = new Blob([backup], { type: 'application/json' });
@@ -402,6 +407,17 @@
 					</svg>
 					Word Wrap
 					{#if appState.wordWrap}
+						<span class="check-mark">✓</span>
+					{/if}
+				</button>
+				<button class="dropdown-item" onclick={toggleSyncScroll}>
+					<svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14">
+						{#if appState.syncScrollEnabled}
+							<path d="M10.97 4.97a.75.75 0 011.07 1.05l-3.99 4.99a.75.75 0 01-1.08.02L4.324 8.384a.75.75 0 111.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 01.02-.022z"/>
+						{/if}
+					</svg>
+					Sync Scroll
+					{#if appState.syncScrollEnabled}
 						<span class="check-mark">✓</span>
 					{/if}
 				</button>

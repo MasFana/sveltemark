@@ -16,13 +16,32 @@
 	let isSyncingScroll = false;
 	let processingTimeout: ReturnType<typeof setTimeout> | null = null;
 
+	// Section dimensions for smart scroll sync
+	interface SectionDimension {
+		startOffset: number;  // Pixel offset from top of container
+		endOffset: number;    // End pixel offset
+		height: number;       // Height in pixels
+	}
+
+	interface SectionInfo {
+		block: MarkdownBlock;
+		previewDimension: SectionDimension;
+	}
+
+	let sectionInfoList = $state<SectionInfo[]>([]);
+
 	// Initialize mermaid
 	onMount(() => {
 		mermaid.initialize({
 			startOnLoad: false,
 			theme: 'dark',
 			securityLevel: 'loose',
-			fontFamily: 'inherit'
+			fontFamily: 'inherit',
+			htmlLabels: false,
+			markdownAutoWrap: true,
+			wrap: true,
+			
+			
 		});
 	});
 
@@ -54,12 +73,56 @@
 	$effect(() => {
 		if (blocks.length > 0 && previewContainer) {
 			// Use tick to ensure DOM is updated, then render mermaid and add copy buttons
-			tick().then(() => {
-				renderMermaidDiagrams();
+			tick().then(async () => {
+				await renderMermaidDiagrams();
 				addCopyButtons();
+				// Measure section dimensions after all rendering is complete
+				measureSectionDimensions();
 			});
 		}
 	});
+
+	// Measure the dimensions of each section in the preview
+	function measureSectionDimensions() {
+		if (!previewContainer) return;
+
+		const blockElements = previewContainer.querySelectorAll('.markdown-block');
+		const newSectionInfoList: SectionInfo[] = [];
+
+		blocks.forEach((block, index) => {
+			const element = blockElements[index] as HTMLElement;
+			if (element) {
+				// For display:contents elements, we need to measure their children
+				const firstChild = element.firstElementChild as HTMLElement;
+				const lastChild = element.lastElementChild as HTMLElement;
+				
+				let startOffset = 0;
+				let endOffset = 0;
+				
+				if (firstChild && lastChild) {
+					// Get the actual visual bounds
+					startOffset = firstChild.offsetTop;
+					// For the end, we need to account for the full height of the last child
+					endOffset = lastChild.offsetTop + lastChild.offsetHeight;
+				} else if (element.offsetHeight > 0) {
+					// Fallback for non-contents elements
+					startOffset = element.offsetTop;
+					endOffset = element.offsetTop + element.offsetHeight;
+				}
+
+				newSectionInfoList.push({
+					block,
+					previewDimension: {
+						startOffset,
+						endOffset,
+						height: endOffset - startOffset
+					}
+				});
+			}
+		});
+
+		sectionInfoList = newSectionInfoList;
+	}
 
 	async function renderMermaidDiagrams() {
 		if (!previewContainer) return;
@@ -127,7 +190,7 @@
 		}
 	}
 
-	// Handle scroll events for scroll sync (proportional)
+	// Handle scroll events for scroll sync (section-based)
 	function handleScroll() {
 		if (!previewContainer || !onscroll || isSyncingScroll) return;
 
@@ -136,6 +199,160 @@
 			scrollHeight: previewContainer.scrollHeight,
 			clientHeight: previewContainer.clientHeight
 		});
+	}
+
+	// Get scroll position as a continuous value across all sections
+	// Returns fractional section index for smooth interpolation
+	export function getScrollPosition(): { sectionIdx: number; posInSection: number } | null {
+		if (!previewContainer || sectionInfoList.length === 0) return null;
+
+		const scrollTop = previewContainer.scrollTop;
+		const maxScroll = previewContainer.scrollHeight - previewContainer.clientHeight;
+		
+		// Handle edge cases
+		if (maxScroll <= 0) return { sectionIdx: 0, posInSection: 0 };
+		if (scrollTop <= 0) return { sectionIdx: 0, posInSection: 0 };
+		if (scrollTop >= maxScroll) {
+			return { sectionIdx: sectionInfoList.length - 1, posInSection: 1 };
+		}
+		
+		// Find which section we're in
+		for (let i = 0; i < sectionInfoList.length; i++) {
+			const section = sectionInfoList[i];
+			const dim = section.previewDimension;
+			
+			// Check if scroll is within this section's range
+			if (scrollTop >= dim.startOffset && scrollTop < dim.endOffset) {
+				const posInSection = dim.height > 0 
+					? (scrollTop - dim.startOffset) / dim.height 
+					: 0;
+				return {
+					sectionIdx: i,
+					posInSection: Math.max(0, Math.min(1, posInSection))
+				};
+			}
+			
+			// Check if we're in the gap between this section and the next
+			if (i < sectionInfoList.length - 1) {
+				const nextSection = sectionInfoList[i + 1];
+				const gapStart = dim.endOffset;
+				const gapEnd = nextSection.previewDimension.startOffset;
+				
+				if (scrollTop >= gapStart && scrollTop < gapEnd) {
+					// Interpolate through the gap - treat it as end of current section
+					return {
+						sectionIdx: i,
+						posInSection: 1 // At end of section during gap
+					};
+				}
+			}
+		}
+		
+		// Fallback: use last section
+		return { sectionIdx: sectionInfoList.length - 1, posInSection: 1 };
+	}
+
+	// Animation state for smooth scrolling
+	let animationFrameId: number | null = null;
+	let animationStartTime: number = 0;
+	let animationStartScroll: number = 0;
+	let animationTargetScroll: number = 0;
+	let lastTargetScroll: number = 0;
+	const ANIMATION_DURATION = 50; // ms - fast for responsive feel
+	const SCROLL_THRESHOLD = 5; // Minimum scroll difference to trigger animation
+
+	// Smooth easing function (ease-out-quad for natural deceleration)
+	function easeOutQuad(t: number): number {
+		return t * (2 - t);
+	}
+
+	// Animate scroll to target position
+	function animateScrollTo(targetScroll: number) {
+		if (!previewContainer) return;
+
+		// Skip if target is very close to current position (prevents micro-jitter)
+		const currentScroll = previewContainer.scrollTop;
+		if (Math.abs(targetScroll - currentScroll) < SCROLL_THRESHOLD) {
+			return;
+		}
+
+		// If we're already animating toward a similar target, don't restart
+		if (animationFrameId !== null && Math.abs(targetScroll - lastTargetScroll) < SCROLL_THRESHOLD) {
+			return;
+		}
+
+		// Cancel any ongoing animation
+		if (animationFrameId !== null) {
+			cancelAnimationFrame(animationFrameId);
+		}
+
+		animationStartTime = performance.now();
+		animationStartScroll = currentScroll;
+		animationTargetScroll = targetScroll;
+		lastTargetScroll = targetScroll;
+		isSyncingScroll = true;
+
+		function animate(currentTime: number) {
+			const elapsed = currentTime - animationStartTime;
+			const progress = Math.min(elapsed / ANIMATION_DURATION, 1);
+			const easedProgress = easeOutQuad(progress);
+
+			const newScroll = animationStartScroll + 
+				(animationTargetScroll - animationStartScroll) * easedProgress;
+			
+			if (previewContainer) {
+				previewContainer.scrollTop = Math.round(newScroll);
+			}
+
+			if (progress < 1) {
+				animationFrameId = requestAnimationFrame(animate);
+			} else {
+				animationFrameId = null;
+				// Keep isSyncingScroll true longer to prevent feedback loops
+				setTimeout(() => {
+					isSyncingScroll = false;
+				}, 100);
+			}
+		}
+
+		animationFrameId = requestAnimationFrame(animate);
+	}
+
+	// Scroll to a specific section and position within it (for section-based sync)
+	export function scrollToSection(sectionIdx: number, posInSection: number, animate: boolean = true) {
+		if (!previewContainer || sectionInfoList.length === 0) return;
+
+		const section = sectionInfoList[Math.min(sectionIdx, sectionInfoList.length - 1)];
+		if (!section) return;
+
+		const dim = section.previewDimension;
+		const targetScroll = dim.startOffset + (dim.height * posInSection);
+		const clampedTarget = Math.max(0, Math.min(targetScroll, 
+			previewContainer.scrollHeight - previewContainer.clientHeight));
+		
+		// Direct scroll - feedback prevention handled by scrollSource in parent
+		isSyncingScroll = true;
+		previewContainer.scrollTop = clampedTarget;
+		isSyncingScroll = false;
+	}
+
+	// Method to scroll to a specific pixel offset (for anchor-based sync)
+	export function scrollToOffset(offset: number) {
+		if (!previewContainer) return;
+		const clampedOffset = Math.max(0, Math.min(offset, 
+			previewContainer.scrollHeight - previewContainer.clientHeight));
+		isSyncingScroll = true;
+		previewContainer.scrollTop = clampedOffset;
+		isSyncingScroll = false;
+	}
+
+	// Get section info for scroll sync (blocks with their line ranges)
+	export function getSectionInfo(): Array<{ startLine: number; endLine: number; previewDimension: SectionDimension }> {
+		return sectionInfoList.map(s => ({
+			startLine: s.block.startLine,
+			endLine: s.block.endLine,
+			previewDimension: s.previewDimension
+		}));
 	}
 
 	// Method to scroll to a specific source line
@@ -159,16 +376,14 @@
 		}
 	}
 
-	// Method to scroll by percentage (for proportional scroll sync)
+	// Method to scroll by percentage (fallback for proportional scroll sync)
 	export function scrollToPercent(percent: number) {
 		if (!previewContainer) return;
 		const maxScroll = previewContainer.scrollHeight - previewContainer.clientHeight;
+		// Direct scroll - feedback prevention handled by scrollSource in parent
 		isSyncingScroll = true;
 		previewContainer.scrollTop = maxScroll * percent;
-		// Reset sync flag after scroll completes
-		requestAnimationFrame(() => {
-			isSyncingScroll = false;
-		});
+		isSyncingScroll = false;
 	}
 
 	// Get current scroll percentage
@@ -201,6 +416,44 @@
 					const id = `mermaid-print-${Math.random().toString(36).substr(2, 9)}`;
 					const { svg } = await mermaid.render(id, code);
 					div.innerHTML = svg;
+					
+					// Normalize the SVG for better print output
+					const svgElement = div.querySelector('svg');
+					if (svgElement) {
+						// Remove fixed height/width, let CSS control sizing
+						svgElement.removeAttribute('height');
+						svgElement.removeAttribute('width');
+						
+						// Remove inline max-width style that mermaid sets (often huge values)
+						svgElement.style.removeProperty('max-width');
+						
+						// Set proper responsive sizing
+						svgElement.style.maxWidth = '100%';
+						svgElement.style.height = 'auto';
+						svgElement.style.display = 'block';
+						svgElement.style.margin = '0 auto';
+						
+						// Fix viewBox if it has excessive padding
+						// Mermaid sometimes sets viewBox with negative coords or large padding
+						const viewBox = svgElement.getAttribute('viewBox');
+						if (viewBox) {
+							const parts = viewBox.split(' ').map(Number);
+							if (parts.length === 4) {
+								// If viewBox starts with negative coordinates, it might cause offset
+								// Keep the viewBox but ensure the SVG displays properly
+								const [minX, minY, width, height] = parts;
+								
+								// If the viewBox has significant negative offset, adjust
+								if (minY < -50) {
+									// Adjust viewBox to start from a reasonable position
+									const newMinY = Math.max(minY, -20);
+									const newHeight = height + (minY - newMinY);
+									svgElement.setAttribute('viewBox', `${minX} ${newMinY} ${width} ${newHeight}`);
+								}
+							}
+						}
+					}
+					
 					// Restore dark theme
 					mermaid.initialize({
 						startOnLoad: false,
@@ -363,10 +616,29 @@
 	}
 
 	/* KaTeX styling */
+	/* Display math ($$...$$) - centered on its own line */
 	.preview-container :global(.katex-display) {
+		display: block;
+		text-align: center;
+		margin: 1em 0;
 		overflow-x: auto;
 		overflow-y: hidden;
 		padding: 8px 0;
+	}
+
+	.preview-container :global(.katex-display > .katex) {
+		display: inline-block;
+		text-align: center;
+	}
+
+	/* Inline math ($...$) - flows with text */
+	.preview-container :global(.katex:not(.katex-display .katex)) {
+		font-size: 1.1em;
+	}
+
+	/* KaTeX color for dark theme */
+	.preview-container :global(.katex) {
+		color: #c9d1d9;
 	}
 
 	/* Task list styling */

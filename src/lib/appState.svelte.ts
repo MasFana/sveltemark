@@ -39,6 +39,7 @@ let isInitialized = $state<boolean>(false);
 let viewOnlyMode = $state<boolean>(typeof localStorage !== 'undefined' ? localStorage.getItem('viewOnlyMode') === 'true' : false);
 let autoHideUI = $state<boolean>(typeof localStorage !== 'undefined' ? localStorage.getItem('autoHideUI') === 'true' : false);
 let wordWrap = $state<boolean>(typeof localStorage !== 'undefined' ? localStorage.getItem('wordWrap') !== 'false' : true);
+let syncScrollEnabled = $state<boolean>(typeof localStorage !== 'undefined' ? localStorage.getItem('syncScrollEnabled') !== 'false' : true);
 
 // Debounce timer
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -330,6 +331,20 @@ function setWordWrap(value: boolean): void {
     }
 }
 
+function toggleSyncScroll(): void {
+    syncScrollEnabled = !syncScrollEnabled;
+    if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('syncScrollEnabled', String(syncScrollEnabled));
+    }
+}
+
+function setSyncScroll(value: boolean): void {
+    syncScrollEnabled = value;
+    if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('syncScrollEnabled', String(syncScrollEnabled));
+    }
+}
+
 // Reset Welcome.md to original content
 async function showHelp(): Promise<void> {
     const fileId = await resetWelcomeFile();
@@ -477,6 +492,9 @@ export const appState = {
     get wordWrap() {
         return wordWrap;
     },
+    get syncScrollEnabled() {
+        return syncScrollEnabled;
+    },
 
     // Actions
     initialize,
@@ -499,6 +517,8 @@ export const appState = {
     setAutoHideUI,
     toggleWordWrap,
     setWordWrap,
+    toggleSyncScroll,
+    setSyncScroll,
     exportBackup,
     importBackup,
     printCurrentFile,

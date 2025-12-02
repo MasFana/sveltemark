@@ -179,43 +179,183 @@
 		loadLayoutState();
 		loadTOCState();
 		await appState.initialize();
+		
+		// Initial section measurement after a short delay to ensure DOM is ready
+		setTimeout(() => {
+			syncSectionDimensions();
+		}, 500);
 	});
 
 	// Track which pane initiated the scroll to prevent feedback loops
 	let scrollSource: 'editor' | 'preview' | null = null;
+	let scrollSourceTimeout: ReturnType<typeof setTimeout> | null = null;
+	let measureSectionsTimeout: ReturnType<typeof setTimeout> | null = null;
 
 	function handleEditorChange(content: string) {
 		appState.updateBuffer(content);
+		
+		// Schedule section measurement after content changes
+		if (measureSectionsTimeout) {
+			clearTimeout(measureSectionsTimeout);
+		}
+		measureSectionsTimeout = setTimeout(() => {
+			syncSectionDimensions();
+		}, 100);
 	}
 
-	// Proportional scroll sync: Editor → Preview
+	// Sync section dimensions between editor and preview
+	function syncSectionDimensions() {
+		if (!editorRef || !previewRef) return;
+		
+		// Get section info from preview (which has the block line ranges)
+		const previewSections = previewRef.getSectionInfo?.() || [];
+		
+		if (previewSections.length > 0) {
+			// Measure corresponding sections in editor
+			const sections = previewSections.map(s => ({ 
+				startLine: s.startLine, 
+				endLine: s.endLine 
+			}));
+			editorRef.measureSections?.(sections);
+		}
+	}
+
+	// Track last scroll positions to avoid micro-updates
+	let lastEditorScrollTop = 0;
+	let lastPreviewScrollTop = 0;
+	const SCROLL_THRESHOLD = 0.5; // Minimum pixels to trigger sync
+
+	// Build cumulative offset map for smooth interpolation between sections
+	// This creates anchor points that map editor positions to preview positions
+	function buildScrollMap() {
+		const editorSections = editorRef?.getEditorSections?.() || [];
+		const previewSections = previewRef?.getSectionInfo?.() || [];
+		
+		if (editorSections.length === 0 || previewSections.length === 0) return null;
+		
+		// Build anchor points: each section start/end maps to corresponding position
+		const anchors: Array<{ editorOffset: number; previewOffset: number }> = [];
+		
+		// Always start with 0,0 anchor to handle top of document
+		anchors.push({ editorOffset: 0, previewOffset: 0 });
+		
+		const numSections = Math.min(editorSections.length, previewSections.length);
+		for (let i = 0; i < numSections; i++) {
+			const eDim = editorSections[i].editorDimension;
+			const pDim = previewSections[i].previewDimension;
+			
+			// Add start of section as anchor (skip if same as previous)
+			if (anchors.length === 0 || 
+				eDim.startOffset !== anchors[anchors.length - 1].editorOffset ||
+				pDim.startOffset !== anchors[anchors.length - 1].previewOffset) {
+				anchors.push({
+					editorOffset: eDim.startOffset,
+					previewOffset: pDim.startOffset
+				});
+			}
+			
+			// Add end of section as anchor
+			anchors.push({
+				editorOffset: eDim.endOffset,
+				previewOffset: pDim.endOffset
+			});
+		}
+		
+		return anchors;
+	}
+
+	// Interpolate scroll position using anchor map
+	function interpolateScroll(
+		scrollTop: number, 
+		anchors: Array<{ editorOffset: number; previewOffset: number }>,
+		fromEditor: boolean
+	): number {
+		if (anchors.length < 2) return scrollTop;
+		
+		const sourceKey = fromEditor ? 'editorOffset' : 'previewOffset';
+		const targetKey = fromEditor ? 'previewOffset' : 'editorOffset';
+		
+		// Handle scroll at or before first anchor
+		if (scrollTop <= anchors[0][sourceKey]) {
+			return anchors[0][targetKey];
+		}
+		
+		// Handle scroll at or after last anchor
+		const lastAnchor = anchors[anchors.length - 1];
+		if (scrollTop >= lastAnchor[sourceKey]) {
+			return lastAnchor[targetKey];
+		}
+		
+		// Find the two anchors we're between
+		for (let i = 0; i < anchors.length - 1; i++) {
+			const a1 = anchors[i];
+			const a2 = anchors[i + 1];
+			
+			if (scrollTop >= a1[sourceKey] && scrollTop <= a2[sourceKey]) {
+				// Linear interpolation between anchors
+				const range = a2[sourceKey] - a1[sourceKey];
+				const t = range > 0 ? (scrollTop - a1[sourceKey]) / range : 0;
+				return a1[targetKey] + t * (a2[targetKey] - a1[targetKey]);
+			}
+		}
+		
+		// Fallback (shouldn't reach here)
+		return scrollTop;
+	}
+
+	// Real-time section-based scroll sync: Editor → Preview
+	// Uses linear interpolation between section anchors for smooth sync
 	function handleEditorScroll(scrollInfo: { scrollTop: number; scrollHeight: number; clientHeight: number }) {
+		if (!appState.syncScrollEnabled) return;
 		if (scrollSource === 'preview') return;
+		
+		// Skip micro-updates
+		if (Math.abs(scrollInfo.scrollTop - lastEditorScrollTop) < SCROLL_THRESHOLD) return;
+		lastEditorScrollTop = scrollInfo.scrollTop;
+		
+		// Mark editor as scroll source
 		scrollSource = 'editor';
+		if (scrollSourceTimeout) clearTimeout(scrollSourceTimeout);
+		scrollSourceTimeout = setTimeout(() => { scrollSource = null; }, 50);
 		
-		const maxScroll = scrollInfo.scrollHeight - scrollInfo.clientHeight;
-		const percent = maxScroll > 0 ? scrollInfo.scrollTop / maxScroll : 0;
-		previewRef?.scrollToPercent(percent);
-		
-		// Reset scroll source after a small delay
-		requestAnimationFrame(() => {
-			scrollSource = null;
-		});
+		// Try anchor-based interpolation first
+		const anchors = buildScrollMap();
+		if (anchors && anchors.length >= 2 && previewRef) {
+			const targetScroll = interpolateScroll(scrollInfo.scrollTop, anchors, true);
+			previewRef.scrollToOffset(targetScroll);
+		} else {
+			// Fallback to percentage-based
+			const maxScroll = scrollInfo.scrollHeight - scrollInfo.clientHeight;
+			const percent = maxScroll > 0 ? scrollInfo.scrollTop / maxScroll : 0;
+			previewRef?.scrollToPercent(percent);
+		}
 	}
 
-	// Proportional scroll sync: Preview → Editor
+	// Real-time section-based scroll sync: Preview → Editor
 	function handlePreviewScroll(scrollInfo: { scrollTop: number; scrollHeight: number; clientHeight: number }) {
+		if (!appState.syncScrollEnabled) return;
 		if (scrollSource === 'editor') return;
+		
+		// Skip micro-updates
+		if (Math.abs(scrollInfo.scrollTop - lastPreviewScrollTop) < SCROLL_THRESHOLD) return;
+		lastPreviewScrollTop = scrollInfo.scrollTop;
+		
+		// Mark preview as scroll source
 		scrollSource = 'preview';
+		if (scrollSourceTimeout) clearTimeout(scrollSourceTimeout);
+		scrollSourceTimeout = setTimeout(() => { scrollSource = null; }, 50);
 		
-		const maxScroll = scrollInfo.scrollHeight - scrollInfo.clientHeight;
-		const percent = maxScroll > 0 ? scrollInfo.scrollTop / maxScroll : 0;
-		editorRef?.scrollToPercent(percent);
-		
-		// Reset scroll source after a small delay
-		requestAnimationFrame(() => {
-			scrollSource = null;
-		});
+		// Try anchor-based interpolation first
+		const anchors = buildScrollMap();
+		if (anchors && anchors.length >= 2 && editorRef) {
+			const targetScroll = interpolateScroll(scrollInfo.scrollTop, anchors, false);
+			editorRef.scrollToOffset(targetScroll);
+		} else {
+			// Fallback to percentage-based
+			const maxScroll = scrollInfo.scrollHeight - scrollInfo.clientHeight;
+			const percent = maxScroll > 0 ? scrollInfo.scrollTop / maxScroll : 0;
+			editorRef?.scrollToPercent(percent);
+		}
 	}
 
 	// Handle mouse movement for auto-hide
@@ -276,6 +416,47 @@
 					pre, code {
 						background: #f6f8fa !important;
 					}
+					/* Hide copy button in print */
+					.copy-code-btn {
+						display: none !important;
+					}
+					/* Code block wrapper - remove extra styling for print */
+					.code-block-wrapper {
+						position: static;
+						margin: 16px 0;
+					}
+					/* Mermaid diagram styling for print */
+					.mermaid {
+						text-align: center;
+						margin: 16px 0;
+						padding: 0 !important;
+						background: transparent;
+						page-break-inside: avoid;
+						overflow: visible;
+					}
+					.mermaid svg {
+						max-width: 100% !important;
+						width: auto !important;
+						height: auto !important;
+						display: block;
+						margin: 0 auto;
+					}
+					/* Remove Mermaid's default max-width which can be huge */
+					.mermaid svg[style*="max-width"] {
+						max-width: 100% !important;
+					}
+					/* Remove excessive padding from Mermaid SVG elements */
+					.mermaid svg [style*="padding"] {
+						padding: 0 !important;
+					}
+					/* Fix for Mermaid SVG container elements */
+					.mermaid svg > g {
+						transform: none !important;
+					}
+					/* Remove any negative margins that might cause offset */
+					.mermaid * {
+						margin-top: 0 !important;
+					}
 					/* KaTeX display math styling */
 					.katex-display {
 						display: block;
@@ -296,6 +477,14 @@
 						body { padding: 20px; }
 						.katex-display {
 							page-break-inside: avoid;
+						}
+						.mermaid {
+							page-break-inside: avoid;
+							margin: 12px 0;
+							padding: 0 !important;
+						}
+						.mermaid svg {
+							max-width: 100% !important;
 						}
 					}
 				</style>

@@ -26,6 +26,21 @@
 	let isUpdating = false;
 	let isSyncingScroll = false;
 
+	// Section dimensions for smart scroll sync
+	interface SectionDimension {
+		startOffset: number;  // Pixel offset from top of container
+		endOffset: number;    // End pixel offset
+		height: number;       // Height in pixels
+	}
+
+	interface EditorSectionInfo {
+		startLine: number;
+		endLine: number;
+		editorDimension: SectionDimension;
+	}
+
+	let editorSections: EditorSectionInfo[] = [];
+
 	// Compartments for dynamic switching
 	const themeCompartment = new Compartment();
 	const wordWrapCompartment = new Compartment();
@@ -281,20 +296,213 @@
 		});
 	}
 
-	// Method to scroll by percentage (for proportional scroll sync)
+	// Measure section dimensions based on line ranges (called by +page.svelte when sections change)
+	export function measureSections(sections: Array<{ startLine: number; endLine: number }>): EditorSectionInfo[] {
+		if (!view) return [];
+		
+		const scroller = view.scrollDOM;
+		const newSections: EditorSectionInfo[] = [];
+		
+		for (const section of sections) {
+			// Get the DOM positions for the start and end lines
+			const startLine = Math.max(1, Math.min(section.startLine, view.state.doc.lines));
+			const endLine = Math.max(1, Math.min(section.endLine, view.state.doc.lines));
+			
+			const startLineObj = view.state.doc.line(startLine);
+			const endLineObj = view.state.doc.line(endLine);
+			
+			// Get pixel offsets using lineBlockAt
+			const startBlock = view.lineBlockAt(startLineObj.from);
+			const endBlock = view.lineBlockAt(endLineObj.to);
+			
+			const startOffset = startBlock.top;
+			const endOffset = endBlock.bottom;
+			
+			newSections.push({
+				startLine,
+				endLine,
+				editorDimension: {
+					startOffset,
+					endOffset,
+					height: endOffset - startOffset
+				}
+			});
+		}
+		
+		editorSections = newSections;
+		return newSections;
+	}
+
+	// Get scroll position as a continuous value across all sections
+	// Returns fractional section index for smooth interpolation
+	export function getScrollPosition(): { sectionIdx: number; posInSection: number } | null {
+		if (!view || editorSections.length === 0) return null;
+
+		const scroller = view.scrollDOM;
+		const scrollTop = scroller.scrollTop;
+		const maxScroll = scroller.scrollHeight - scroller.clientHeight;
+		
+		// Handle edge cases
+		if (maxScroll <= 0) return { sectionIdx: 0, posInSection: 0 };
+		if (scrollTop <= 0) return { sectionIdx: 0, posInSection: 0 };
+		if (scrollTop >= maxScroll) {
+			return { sectionIdx: editorSections.length - 1, posInSection: 1 };
+		}
+		
+		// Find which section we're in
+		for (let i = 0; i < editorSections.length; i++) {
+			const section = editorSections[i];
+			const dim = section.editorDimension;
+			
+			// Check if scroll is within this section's range
+			if (scrollTop >= dim.startOffset && scrollTop < dim.endOffset) {
+				const posInSection = dim.height > 0 
+					? (scrollTop - dim.startOffset) / dim.height 
+					: 0;
+				return {
+					sectionIdx: i,
+					posInSection: Math.max(0, Math.min(1, posInSection))
+				};
+			}
+			
+			// Check if we're in the gap between this section and the next
+			if (i < editorSections.length - 1) {
+				const nextSection = editorSections[i + 1];
+				const gapStart = dim.endOffset;
+				const gapEnd = nextSection.editorDimension.startOffset;
+				
+				if (scrollTop >= gapStart && scrollTop < gapEnd) {
+					// Interpolate through the gap - treat it as end of current section
+					const gapProgress = gapEnd > gapStart 
+						? (scrollTop - gapStart) / (gapEnd - gapStart)
+						: 1;
+					// Return position at end of current section, blending toward next
+					return {
+						sectionIdx: i,
+						posInSection: 1 // At end of section during gap
+					};
+				}
+			}
+		}
+		
+		// Fallback: use last section
+		return { sectionIdx: editorSections.length - 1, posInSection: 1 };
+	}
+
+	// Animation state for smooth scrolling
+	let animationFrameId: number | null = null;
+	let animationStartTime: number = 0;
+	let animationStartScroll: number = 0;
+	let animationTargetScroll: number = 0;
+	let lastTargetScroll: number = 0;
+	const ANIMATION_DURATION = 50; // ms - fast for responsive feel
+	const SCROLL_THRESHOLD = 5; // Minimum scroll difference to trigger animation
+
+	// Smooth easing function (ease-out-quad for natural deceleration)
+	function easeOutQuad(t: number): number {
+		return t * (2 - t);
+	}
+
+	// Animate scroll to target position
+	function animateScrollTo(targetScroll: number) {
+		if (!view) return;
+		const scroller = view.scrollDOM;
+
+		// Skip if target is very close to current position (prevents micro-jitter)
+		const currentScroll = scroller.scrollTop;
+		if (Math.abs(targetScroll - currentScroll) < SCROLL_THRESHOLD) {
+			return;
+		}
+
+		// If we're already animating toward a similar target, don't restart
+		if (animationFrameId !== null && Math.abs(targetScroll - lastTargetScroll) < SCROLL_THRESHOLD) {
+			return;
+		}
+
+		// Cancel any ongoing animation
+		if (animationFrameId !== null) {
+			cancelAnimationFrame(animationFrameId);
+		}
+
+		animationStartTime = performance.now();
+		animationStartScroll = currentScroll;
+		animationTargetScroll = targetScroll;
+		lastTargetScroll = targetScroll;
+		isSyncingScroll = true;
+
+		function animate(currentTime: number) {
+			const elapsed = currentTime - animationStartTime;
+			const progress = Math.min(elapsed / ANIMATION_DURATION, 1);
+			const easedProgress = easeOutQuad(progress);
+
+			const newScroll = animationStartScroll + 
+				(animationTargetScroll - animationStartScroll) * easedProgress;
+			
+			if (view) {
+				view.scrollDOM.scrollTop = Math.round(newScroll);
+			}
+
+			if (progress < 1) {
+				animationFrameId = requestAnimationFrame(animate);
+			} else {
+				animationFrameId = null;
+				// Keep isSyncingScroll true longer to prevent feedback loops
+				setTimeout(() => {
+					isSyncingScroll = false;
+				}, 100);
+			}
+		}
+
+		animationFrameId = requestAnimationFrame(animate);
+	}
+
+	// Scroll to a specific section and position within it (for section-based sync)
+	export function scrollToSection(sectionIdx: number, posInSection: number, animate: boolean = true) {
+		if (!view || editorSections.length === 0) return;
+
+		const section = editorSections[Math.min(sectionIdx, editorSections.length - 1)];
+		if (!section) return;
+
+		const scroller = view.scrollDOM;
+		const dim = section.editorDimension;
+		const targetScroll = dim.startOffset + (dim.height * posInSection);
+		const clampedTarget = Math.max(0, Math.min(targetScroll, 
+			scroller.scrollHeight - scroller.clientHeight));
+		
+		// Direct scroll - feedback prevention handled by scrollSource in parent
+		isSyncingScroll = true;
+		scroller.scrollTop = clampedTarget;
+		isSyncingScroll = false;
+	}
+
+	// Method to scroll to a specific pixel offset (for anchor-based sync)
+	export function scrollToOffset(offset: number) {
+		if (!view) return;
+		const scroller = view.scrollDOM;
+		const clampedOffset = Math.max(0, Math.min(offset, 
+			scroller.scrollHeight - scroller.clientHeight));
+		isSyncingScroll = true;
+		scroller.scrollTop = clampedOffset;
+		isSyncingScroll = false;
+	}
+
+	// Get editor sections for scroll mapping
+	export function getEditorSections(): EditorSectionInfo[] {
+		return editorSections;
+	}
+
+	// Method to scroll by percentage (fallback for proportional scroll sync)
 	export function scrollToPercent(percent: number) {
 		if (!view) return;
 		const scroller = view.scrollDOM;
 		const maxScroll = scroller.scrollHeight - scroller.clientHeight;
+		// Direct scroll - feedback prevention handled by scrollSource in parent
 		isSyncingScroll = true;
 		scroller.scrollTop = maxScroll * percent;
-		// Reset sync flag after scroll completes
-		requestAnimationFrame(() => {
-			isSyncingScroll = false;
-		});
+		isSyncingScroll = false;
 	}
 
-	// Get current scroll percentage
+	// Get current scroll percentage (fallback)
 	export function getScrollPercent(): number {
 		if (!view) return 0;
 		const scroller = view.scrollDOM;
