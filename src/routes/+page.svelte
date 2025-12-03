@@ -65,6 +65,24 @@
 		activeHeadingId = currentActive;
 	}
 
+	// Generate slug matching rehype-slug's GitHub-style algorithm (github-slugger)
+	function generateSlug(text: string): string {
+		return text
+			.toLowerCase()
+			.trim()
+			// Remove HTML entities like &amp;
+			.replace(/&amp;/g, '')
+			.replace(/&[a-z]+;/g, '')
+			// Remove & (github-slugger removes it, doesn't replace)
+			.replace(/&/g, '')
+			// Remove special chars (except alphanumeric, spaces, existing hyphens)
+			.replace(/[^\w\s-]/g, '')
+			// Replace spaces with hyphens (keeps multiple spaces as multiple hyphens)
+			.replace(/\s/g, '-')
+			// Remove leading/trailing hyphens
+			.replace(/^-+|-+$/g, '');
+	}
+
 	// Extract TOC from markdown content
 	$effect(() => {
 		if (appState.buffer) {
@@ -74,12 +92,26 @@
 			while ((match = headingRegex.exec(appState.buffer)) !== null) {
 				const level = match[1].length;
 				const text = match[2].trim();
-				const id = text.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-');
+				const id = generateSlug(text);
 				items.push({ level, text, id });
 			}
 			tocItems = items;
 		} else {
 			tocItems = [];
+		}
+	});
+
+	// Auto-hide UI effect: hide sidebar/toolbar when enabled, show when disabled
+	$effect(() => {
+		if (appState.autoHideUI) {
+			// When auto-hide is enabled, hide the UI elements
+			showSidebar = false;
+			showToolbar = false;
+		} else {
+			// When auto-hide is disabled, show the UI elements and restore sidebar state
+			showSidebar = true;
+			showToolbar = true;
+			showDesktopSidebar = true;
 		}
 	});
 
@@ -386,20 +418,22 @@
 		const x = event.clientX;
 		const y = event.clientY;
 
-		// Check if hovering over a dropdown menu
+		// Check if hovering over a dropdown menu or toolbar
 		const target = event.target as HTMLElement;
 		const isInDropdown = target.closest('.dropdown-menu') !== null || 
 		                     target.closest('.toolbar') !== null ||
 		                     target.closest('.toolbar-row') !== null;
 
-		// Near sidebar (left edge) or in sidebar
+		// Sidebar: trigger at the very edge (10px), stay visible while hovering over sidebar
 		const isInSidebar = target.closest('.sidebar-wrapper') !== null;
-		mouseNearSidebar = x < 50 || isInSidebar;
-		showSidebar = mouseNearSidebar || x < 260 || isInSidebar;
+		const atLeftEdge = x <= 10;
+		mouseNearSidebar = atLeftEdge || isInSidebar;
+		showSidebar = atLeftEdge || isInSidebar;
 
-		// Near toolbar (top edge) or in toolbar/dropdown
-		mouseNearToolbar = y < 20 || isInDropdown;
-		showToolbar = mouseNearToolbar || y < 80 || isInDropdown;
+		// Toolbar: trigger at the very top edge (10px), stay visible while hovering over toolbar
+		const atTopEdge = y <= 10;
+		mouseNearToolbar = atTopEdge || isInDropdown;
+		showToolbar = atTopEdge || isInDropdown;
 	}
 
 	// Print function
@@ -634,12 +668,12 @@
 		
 		<div 
 			class="sidebar-wrapper" 
-			class:hidden={isMobile ? !showMobileSidebar : (!showDesktopSidebar && !(appState.autoHideUI && showSidebar))}
+			class:hidden={isMobile ? !showMobileSidebar : (appState.autoHideUI ? !showSidebar : !showDesktopSidebar)}
 			class:mobile-sidebar={isMobile}
-			style={isMobile ? '' : `width: ${showDesktopSidebar ? sidebarWidth : 0}px;`}
+			style={isMobile ? '' : `width: ${appState.autoHideUI ? (showSidebar ? sidebarWidth : 0) : (showDesktopSidebar ? sidebarWidth : 0)}px;`}
 		>
 			<Sidebar />
-			{#if !isMobile && showDesktopSidebar}
+			{#if !isMobile && (appState.autoHideUI ? showSidebar : showDesktopSidebar)}
 				<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 				<div 
 					class="resize-handle resize-handle-sidebar"

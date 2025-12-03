@@ -31,7 +31,7 @@
 
 	let sectionInfoList = $state<SectionInfo[]>([]);
 
-	// Initialize mermaid
+	// Initialize mermaid and set up resize observer for dimension changes
 	onMount(() => {
 		mermaid.initialize({
 			startOnLoad: false,
@@ -41,9 +41,27 @@
 			htmlLabels: false,
 			markdownAutoWrap: true,
 			wrap: true,
-			
-			
 		});
+
+		// Use ResizeObserver to detect any size changes (images, dynamic content, etc.)
+		let resizeTimeout: ReturnType<typeof setTimeout> | null = null;
+		const resizeObserver = new ResizeObserver(() => {
+			// Debounce re-measurement to batch multiple resize events
+			if (resizeTimeout) clearTimeout(resizeTimeout);
+			resizeTimeout = setTimeout(() => {
+				measureSectionDimensions();
+			}, 50);
+		});
+
+		// Observe the container for any size changes within it
+		if (previewContainer) {
+			resizeObserver.observe(previewContainer);
+		}
+
+		return () => {
+			resizeObserver.disconnect();
+			if (resizeTimeout) clearTimeout(resizeTimeout);
+		};
 	});
 
 	// Debounced block processing when content changes
