@@ -6,7 +6,7 @@
 	import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 	import { languages } from '@codemirror/language-data';
 	import { HighlightStyle, syntaxHighlighting, bracketMatching, foldGutter, indentOnInput, foldKeymap } from '@codemirror/language';
-	import { closeBrackets, closeBracketsKeymap, autocompletion, completionKeymap } from '@codemirror/autocomplete';
+	import { closeBrackets, closeBracketsKeymap, autocompletion, completionKeymap, type CompletionContext, type Completion } from '@codemirror/autocomplete';
 	import { searchKeymap, highlightSelectionMatches } from '@codemirror/search';
 	import { lintKeymap } from '@codemirror/lint';
 	import { tags } from '@lezer/highlight';
@@ -44,6 +44,88 @@
 	// Compartments for dynamic switching
 	const themeCompartment = new Compartment();
 	const wordWrapCompartment = new Compartment();
+
+	// Markdown-specific completions
+	const markdownCompletions: Completion[] = [
+		// Headers
+		{ label: '# ', displayLabel: '# Heading 1', type: 'keyword', detail: 'H1 heading', boost: 10 },
+		{ label: '## ', displayLabel: '## Heading 2', type: 'keyword', detail: 'H2 heading', boost: 9 },
+		{ label: '### ', displayLabel: '### Heading 3', type: 'keyword', detail: 'H3 heading', boost: 8 },
+		{ label: '#### ', displayLabel: '#### Heading 4', type: 'keyword', detail: 'H4 heading', boost: 7 },
+		{ label: '##### ', displayLabel: '##### Heading 5', type: 'keyword', detail: 'H5 heading', boost: 6 },
+		{ label: '###### ', displayLabel: '###### Heading 6', type: 'keyword', detail: 'H6 heading', boost: 5 },
+		// Lists
+		{ label: '- ', displayLabel: '- List item', type: 'text', detail: 'Unordered list', boost: 4 },
+		{ label: '* ', displayLabel: '* List item', type: 'text', detail: 'Unordered list', boost: 4 },
+		{ label: '1. ', displayLabel: '1. Numbered item', type: 'text', detail: 'Ordered list', boost: 4 },
+		{ label: '- [ ] ', displayLabel: '- [ ] Task', type: 'text', detail: 'Task list item', boost: 3 },
+		{ label: '- [x] ', displayLabel: '- [x] Done task', type: 'text', detail: 'Completed task', boost: 3 },
+		// Formatting
+		{ label: '**bold**', displayLabel: '**bold**', type: 'text', detail: 'Bold text' },
+		{ label: '*italic*', displayLabel: '*italic*', type: 'text', detail: 'Italic text' },
+		{ label: '~~strikethrough~~', displayLabel: '~~strikethrough~~', type: 'text', detail: 'Strikethrough' },
+		{ label: '`code`', displayLabel: '`code`', type: 'text', detail: 'Inline code' },
+		// Links and images
+		{ label: '[text](url)', displayLabel: '[text](url)', type: 'text', detail: 'Link' },
+		{ label: '![alt](url)', displayLabel: '![alt](url)', type: 'text', detail: 'Image' },
+		// Blocks
+		{ label: '> ', displayLabel: '> Blockquote', type: 'text', detail: 'Blockquote' },
+		{ label: '---', displayLabel: '---', type: 'text', detail: 'Horizontal rule' },
+		// Code blocks
+		{ label: '```\n\n```', displayLabel: '``` Code block', type: 'text', detail: 'Fenced code block', boost: 2 },
+		{ label: '```javascript\n\n```', displayLabel: '```javascript', type: 'text', detail: 'JavaScript code' },
+		{ label: '```typescript\n\n```', displayLabel: '```typescript', type: 'text', detail: 'TypeScript code' },
+		{ label: '```python\n\n```', displayLabel: '```python', type: 'text', detail: 'Python code' },
+		{ label: '```mermaid\n\n```', displayLabel: '```mermaid', type: 'text', detail: 'Mermaid diagram' },
+		// Math
+		{ label: '$math$', displayLabel: '$math$', type: 'text', detail: 'Inline math' },
+		{ label: '$$\n\n$$', displayLabel: '$$ Math block', type: 'text', detail: 'Display math block' },
+		// Tables
+		{ label: '| Column 1 | Column 2 |\n|----------|----------|\n| Cell 1   | Cell 2   |', displayLabel: 'Table', type: 'text', detail: 'Markdown table' },
+	];
+
+	// Completion function that provides markdown completions
+	function markdownComplete(context: CompletionContext) {
+		// Only trigger at line start or after whitespace for structural elements
+		const line = context.state.doc.lineAt(context.pos);
+		const textBefore = context.state.sliceDoc(line.from, context.pos);
+		
+		// Check if we're at line start (for headers, lists, etc.)
+		const atLineStart = textBefore.trim() === '' || /^\s*$/.test(textBefore);
+		
+		// Get word being typed
+		const word = context.matchBefore(/[\w#*\-`>$\[!|]+/);
+		
+		// Don't complete if no word and not explicitly requested
+		if (!word && !context.explicit) return null;
+		
+		const from = word ? word.from : context.pos;
+		const text = word ? word.text : '';
+		
+		// Filter completions based on context
+		let options = markdownCompletions;
+		
+		// At line start, prioritize structural elements
+		if (atLineStart) {
+			options = markdownCompletions.filter(c => 
+				c.label.startsWith('#') || 
+				c.label.startsWith('-') || 
+				c.label.startsWith('*') || 
+				c.label.startsWith('1') || 
+				c.label.startsWith('>') || 
+				c.label.startsWith('`') ||
+				c.label.startsWith('$') ||
+				c.label.startsWith('|') ||
+				c.label.startsWith('---')
+			);
+		}
+		
+		return {
+			from,
+			options,
+			validFor: /^[\w#*\-`>$\[!|]*$/
+		};
+	}
 
 	// GitHub Dark theme colors
 	const githubDarkTheme = EditorView.theme({
@@ -188,7 +270,11 @@
 			indentOnInput(),
 			bracketMatching(),
 			closeBrackets(),
-			autocompletion(),
+			autocompletion({
+				override: [markdownComplete],
+				defaultKeymap: true,
+				icons: true
+			}),
 			rectangularSelection(),
 			crosshairCursor(),
 			highlightActiveLine(),
@@ -489,6 +575,17 @@
 	// Get editor sections for scroll mapping
 	export function getEditorSections(): EditorSectionInfo[] {
 		return editorSections;
+	}
+
+	// Get scroll dimensions for viewport-aware sync
+	export function getScrollDimensions(): { scrollTop: number; scrollHeight: number; clientHeight: number } | null {
+		if (!view) return null;
+		const scroller = view.scrollDOM;
+		return {
+			scrollTop: scroller.scrollTop,
+			scrollHeight: scroller.scrollHeight,
+			clientHeight: scroller.clientHeight
+		};
 	}
 
 	// Method to scroll by percentage (fallback for proportional scroll sync)

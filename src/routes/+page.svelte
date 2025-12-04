@@ -257,103 +257,169 @@
 	let lastPreviewScrollTop = 0;
 	const SCROLL_THRESHOLD = 0.5; // Minimum pixels to trigger sync
 
-	// Build cumulative offset map for smooth interpolation between sections
-	// This creates anchor points that map editor positions to preview positions
-	function buildScrollMap() {
+	// Section descriptor linking editor and preview dimensions
+	interface SectionDesc {
+		editorDimension: { startOffset: number; endOffset: number; height: number };
+		previewDimension: { startOffset: number; endOffset: number; height: number };
+	}
+
+	// Build section descriptors for scroll mapping
+	interface ScrollMappingData {
+		sections: SectionDesc[];
+	}
+
+	// Build scroll mapping data
+	function buildScrollMapping(): ScrollMappingData | null {
 		const editorSections = editorRef?.getEditorSections?.() || [];
 		const previewSections = previewRef?.getSectionInfo?.() || [];
 		
 		if (editorSections.length === 0 || previewSections.length === 0) return null;
 		
-		// Build anchor points: each section start/end maps to corresponding position
-		const anchors: Array<{ editorOffset: number; previewOffset: number }> = [];
-		
-		// Always start with 0,0 anchor to handle scrolling above first content
-		anchors.push({ editorOffset: 0, previewOffset: 0 });
-		
 		const numSections = Math.min(editorSections.length, previewSections.length);
+		const sections: SectionDesc[] = [];
+		
 		for (let i = 0; i < numSections; i++) {
-			const eDim = editorSections[i].editorDimension;
-			const pDim = previewSections[i].previewDimension;
-			
-			// Add start of section as anchor
-			anchors.push({
-				editorOffset: eDim.startOffset,
-				previewOffset: pDim.startOffset
-			});
-			
-			// Add end of section as anchor
-			anchors.push({
-				editorOffset: eDim.endOffset,
-				previewOffset: pDim.endOffset
+			sections.push({
+				editorDimension: editorSections[i].editorDimension,
+				previewDimension: previewSections[i].previewDimension
 			});
 		}
 		
-		// Sort anchors by editor offset to ensure proper order
-		anchors.sort((a, b) => a.editorOffset - b.editorOffset);
-		
-		// Remove duplicate editor offsets (keep first occurrence)
-		const uniqueAnchors: typeof anchors = [];
-		let lastEditorOffset = -1;
-		for (const anchor of anchors) {
-			if (anchor.editorOffset !== lastEditorOffset) {
-				uniqueAnchors.push(anchor);
-				lastEditorOffset = anchor.editorOffset;
-			}
-		}
-		
-		return uniqueAnchors;
+		return { sections };
 	}
 
-	// Interpolate scroll position using anchor map
-	function interpolateScroll(
-		scrollTop: number, 
-		anchors: Array<{ editorOffset: number; previewOffset: number }>,
-		fromEditor: boolean
-	): number {
-		if (anchors.length < 2) return scrollTop;
+	// Map scroll position from editor to preview using viewport-relative anchors
+	// The key insight: we create anchor points where each section's START reaches the viewport TOP.
+	// For the editor, scrollTop = section.startOffset means that section is at viewport top.
+	// For the preview, scrollTop = section.startOffset means that section is at viewport top.
+	// We also need to ensure scrolling to the END of editor maps to END of preview.
+	function syncEditorToPreview(editorScrollTop: number): number | null {
+		const mapping = buildScrollMapping();
+		if (!mapping || mapping.sections.length === 0) return null;
 		
-		const sourceKey = fromEditor ? 'editorOffset' : 'previewOffset';
-		const targetKey = fromEditor ? 'previewOffset' : 'editorOffset';
+		const previewDims = previewRef?.getScrollDimensions?.();
+		const editorDims = editorRef?.getScrollDimensions?.();
+		if (!previewDims || !editorDims) return null;
 		
-		// Create a sorted view based on source key for proper lookup
-		const sortedAnchors = [...anchors].sort((a, b) => a[sourceKey] - b[sourceKey]);
+		const previewMaxScroll = previewDims.scrollHeight - previewDims.clientHeight;
+		const editorMaxScroll = editorDims.scrollHeight - editorDims.clientHeight;
+		const { sections } = mapping;
 		
-		// Handle scroll at or before first anchor - return 0 to scroll to top
-		if (scrollTop <= sortedAnchors[0][sourceKey]) {
-			// Proportionally map to target based on first content anchor
-			if (sortedAnchors.length >= 2 && sortedAnchors[0][sourceKey] > 0) {
-				const ratio = scrollTop / sortedAnchors[0][sourceKey];
-				return sortedAnchors[0][targetKey] * ratio;
-			}
-			return 0;
-		}
+		// Edge cases
+		if (editorMaxScroll <= 1) return 0;
+		if (previewMaxScroll <= 1) return 0;
 		
-		// Handle scroll at or after last anchor
-		const lastAnchor = sortedAnchors[sortedAnchors.length - 1];
-		if (scrollTop >= lastAnchor[sourceKey]) {
-			return lastAnchor[targetKey];
-		}
-		
-		// Find the two anchors we're between
-		for (let i = 0; i < sortedAnchors.length - 1; i++) {
-			const a1 = sortedAnchors[i];
-			const a2 = sortedAnchors[i + 1];
-			
-			if (scrollTop >= a1[sourceKey] && scrollTop <= a2[sourceKey]) {
-				// Linear interpolation between anchors
-				const range = a2[sourceKey] - a1[sourceKey];
-				const t = range > 0 ? (scrollTop - a1[sourceKey]) / range : 0;
-				return a1[targetKey] + t * (a2[targetKey] - a1[targetKey]);
+		// Find which section we're currently in based on scroll position
+		// A section is "at viewport top" when scrollTop >= section.startOffset
+		let currentSectionIdx = 0;
+		for (let i = 0; i < sections.length; i++) {
+			if (editorScrollTop >= sections[i].editorDimension.startOffset) {
+				currentSectionIdx = i;
+			} else {
+				break;
 			}
 		}
 		
-		// Fallback (shouldn't reach here)
-		return 0;
+		const currentSection = sections[currentSectionIdx];
+		const nextSection = sections[currentSectionIdx + 1];
+		
+		// Calculate how far we are within the current section (0 to 1)
+		let posInSection = 0;
+		if (nextSection) {
+			const sectionStart = currentSection.editorDimension.startOffset;
+			const sectionEnd = nextSection.editorDimension.startOffset;
+			const sectionRange = sectionEnd - sectionStart;
+			if (sectionRange > 0) {
+				posInSection = Math.max(0, Math.min(1, (editorScrollTop - sectionStart) / sectionRange));
+			}
+		} else {
+			// Last section - interpolate to end
+			const sectionStart = currentSection.editorDimension.startOffset;
+			const sectionEnd = editorMaxScroll;
+			const sectionRange = sectionEnd - sectionStart;
+			if (sectionRange > 0) {
+				posInSection = Math.max(0, Math.min(1, (editorScrollTop - sectionStart) / sectionRange));
+			}
+		}
+		
+		// Map to preview: find corresponding position
+		const previewSectionStart = currentSection.previewDimension.startOffset;
+		let previewSectionEnd: number;
+		if (nextSection) {
+			previewSectionEnd = nextSection.previewDimension.startOffset;
+		} else {
+			previewSectionEnd = previewMaxScroll;
+		}
+		
+		const previewScrollTop = previewSectionStart + (previewSectionEnd - previewSectionStart) * posInSection;
+		
+		return Math.min(Math.max(0, previewScrollTop), previewMaxScroll);
 	}
 
-	// Real-time section-based scroll sync: Editor → Preview
-	// Uses linear interpolation between section anchors for smooth sync
+	// Map scroll position from preview to editor (mirror of above)
+	function syncPreviewToEditor(previewScrollTop: number): number | null {
+		const mapping = buildScrollMapping();
+		if (!mapping || mapping.sections.length === 0) return null;
+		
+		const editorDims = editorRef?.getScrollDimensions?.();
+		const previewDims = previewRef?.getScrollDimensions?.();
+		if (!editorDims || !previewDims) return null;
+		
+		const editorMaxScroll = editorDims.scrollHeight - editorDims.clientHeight;
+		const previewMaxScroll = previewDims.scrollHeight - previewDims.clientHeight;
+		const { sections } = mapping;
+		
+		// Edge cases
+		if (previewMaxScroll <= 1) return 0;
+		if (editorMaxScroll <= 1) return 0;
+		
+		// Find which section we're currently in based on scroll position
+		let currentSectionIdx = 0;
+		for (let i = 0; i < sections.length; i++) {
+			if (previewScrollTop >= sections[i].previewDimension.startOffset) {
+				currentSectionIdx = i;
+			} else {
+				break;
+			}
+		}
+		
+		const currentSection = sections[currentSectionIdx];
+		const nextSection = sections[currentSectionIdx + 1];
+		
+		// Calculate how far we are within the current section (0 to 1)
+		let posInSection = 0;
+		if (nextSection) {
+			const sectionStart = currentSection.previewDimension.startOffset;
+			const sectionEnd = nextSection.previewDimension.startOffset;
+			const sectionRange = sectionEnd - sectionStart;
+			if (sectionRange > 0) {
+				posInSection = Math.max(0, Math.min(1, (previewScrollTop - sectionStart) / sectionRange));
+			}
+		} else {
+			// Last section - interpolate to end
+			const sectionStart = currentSection.previewDimension.startOffset;
+			const sectionEnd = previewMaxScroll;
+			const sectionRange = sectionEnd - sectionStart;
+			if (sectionRange > 0) {
+				posInSection = Math.max(0, Math.min(1, (previewScrollTop - sectionStart) / sectionRange));
+			}
+		}
+		
+		// Map to editor: find corresponding position
+		const editorSectionStart = currentSection.editorDimension.startOffset;
+		let editorSectionEnd: number;
+		if (nextSection) {
+			editorSectionEnd = nextSection.editorDimension.startOffset;
+		} else {
+			editorSectionEnd = editorMaxScroll;
+		}
+		
+		const editorScrollTop = editorSectionStart + (editorSectionEnd - editorSectionStart) * posInSection;
+		
+		return Math.min(Math.max(0, editorScrollTop), editorMaxScroll);
+	}
+
+	// Real-time scroll sync: Editor → Preview
 	function handleEditorScroll(scrollInfo: { scrollTop: number; scrollHeight: number; clientHeight: number }) {
 		if (!appState.syncScrollEnabled) return;
 		if (scrollSource === 'preview') return;
@@ -365,12 +431,11 @@
 		// Mark editor as scroll source
 		scrollSource = 'editor';
 		if (scrollSourceTimeout) clearTimeout(scrollSourceTimeout);
-		scrollSourceTimeout = setTimeout(() => { scrollSource = null; }, 50);
+		scrollSourceTimeout = setTimeout(() => { scrollSource = null; }, 100);
 		
-		// Try anchor-based interpolation first
-		const anchors = buildScrollMap();
-		if (anchors && anchors.length >= 2 && previewRef) {
-			const targetScroll = interpolateScroll(scrollInfo.scrollTop, anchors, true);
+		// Use StackEdit-style section-based sync
+		const targetScroll = syncEditorToPreview(scrollInfo.scrollTop);
+		if (targetScroll !== null && previewRef) {
 			previewRef.scrollToOffset(targetScroll);
 		} else {
 			// Fallback to percentage-based
@@ -380,7 +445,7 @@
 		}
 	}
 
-	// Real-time section-based scroll sync: Preview → Editor
+	// Real-time scroll sync: Preview → Editor (StackEdit-style)
 	function handlePreviewScroll(scrollInfo: { scrollTop: number; scrollHeight: number; clientHeight: number }) {
 		if (!appState.syncScrollEnabled) return;
 		if (scrollSource === 'editor') return;
@@ -392,12 +457,11 @@
 		// Mark preview as scroll source
 		scrollSource = 'preview';
 		if (scrollSourceTimeout) clearTimeout(scrollSourceTimeout);
-		scrollSourceTimeout = setTimeout(() => { scrollSource = null; }, 50);
+		scrollSourceTimeout = setTimeout(() => { scrollSource = null; }, 100);
 		
-		// Try anchor-based interpolation first
-		const anchors = buildScrollMap();
-		if (anchors && anchors.length >= 2 && editorRef) {
-			const targetScroll = interpolateScroll(scrollInfo.scrollTop, anchors, false);
+		// Use StackEdit-style section-based sync
+		const targetScroll = syncPreviewToEditor(scrollInfo.scrollTop);
+		if (targetScroll !== null && editorRef) {
 			editorRef.scrollToOffset(targetScroll);
 		} else {
 			// Fallback to percentage-based
@@ -776,6 +840,7 @@
 									bind:this={previewRef}
 									content={appState.buffer}
 									onscroll={(e) => { handlePreviewScroll(e); updateActiveHeading(); }}
+									ondimensionschange={syncSectionDimensions}
 								/>
 							</div>
 						{:else}
@@ -795,6 +860,7 @@
 								bind:this={previewRef}
 								content={appState.buffer}
 								onscroll={(e) => { handlePreviewScroll(e); updateActiveHeading(); }}
+								ondimensionschange={syncSectionDimensions}
 							/>
 						</div>
 					{/if}

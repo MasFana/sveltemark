@@ -6,10 +6,11 @@
 	interface Props {
 		content?: string;
 		onscroll?: (scrollInfo: { scrollTop: number; scrollHeight: number; clientHeight: number }) => void;
+		ondimensionschange?: () => void; // Called when section dimensions are measured/updated
 		class?: string;
 	}
 
-	let { content = '', onscroll, class: className = '' }: Props = $props();
+	let { content = '', onscroll, ondimensionschange, class: className = '' }: Props = $props();
 
 	let previewContainer: HTMLDivElement;
 	let blocks = $state<MarkdownBlock[]>([]);
@@ -98,6 +99,10 @@
 			tick().then(async () => {
 				await renderMermaidDiagrams();
 				addCopyButtons();
+				
+				// Wait for all images and dynamic content to load before measuring
+				await waitForContentToLoad();
+				
 				// Measure section dimensions after all rendering is complete
 				measureSectionDimensions();
 				
@@ -108,6 +113,64 @@
 			});
 		}
 	});
+
+	// Wait for all images, iframes, and dynamic content to fully load
+	async function waitForContentToLoad(): Promise<void> {
+		if (!previewContainer) return;
+		
+		// Collect all loading promises
+		const loadingPromises: Promise<void>[] = [];
+		
+		// Wait for all images to load
+		const images = previewContainer.querySelectorAll('img');
+		images.forEach((img) => {
+			if (!img.complete) {
+				loadingPromises.push(new Promise((resolve) => {
+					const onLoad = () => { img.removeEventListener('error', onLoad); resolve(); };
+					const onError = () => { img.removeEventListener('load', onLoad); resolve(); };
+					img.addEventListener('load', onLoad, { once: true });
+					img.addEventListener('error', onError, { once: true });
+				}));
+			}
+		});
+		
+		// Wait for SVGs in mermaid diagrams to be ready (they might resize)
+		const mermaidSvgs = previewContainer.querySelectorAll('.mermaid svg');
+		mermaidSvgs.forEach((svg) => {
+			// SVGs are synchronous but might have fonts loading
+			loadingPromises.push(new Promise((resolve) => {
+				// Use requestAnimationFrame to ensure layout is complete
+				requestAnimationFrame(() => {
+					requestAnimationFrame(() => resolve());
+				});
+			}));
+		});
+		
+		// Wait for KaTeX elements to render (they use fonts that might load async)
+		const katexElements = previewContainer.querySelectorAll('.katex');
+		if (katexElements.length > 0) {
+			// Wait for fonts to be ready
+			loadingPromises.push(
+				document.fonts.ready.then(() => {
+					// Extra frame to ensure layout recalc
+					return new Promise((resolve) => {
+						requestAnimationFrame(() => resolve());
+					});
+				})
+			);
+		}
+		
+		// Wait for all promises with a timeout
+		if (loadingPromises.length > 0) {
+			await Promise.race([
+				Promise.all(loadingPromises),
+				new Promise(resolve => setTimeout(resolve, 2000)) // 2s timeout
+			]);
+		}
+		
+		// Final layout settle
+		await new Promise(resolve => requestAnimationFrame(resolve));
+	}
 
 	// Measure the dimensions of each section in the preview
 	function measureSectionDimensions() {
@@ -157,6 +220,9 @@
 		});
 
 		sectionInfoList = newSectionInfoList;
+		
+		// Notify parent that dimensions have been updated
+		ondimensionschange?.();
 	}
 
 	async function renderMermaidDiagrams() {
@@ -391,6 +457,16 @@
 			endLine: s.block.endLine,
 			previewDimension: s.previewDimension
 		}));
+	}
+
+	// Get scroll dimensions for viewport-aware sync
+	export function getScrollDimensions(): { scrollTop: number; scrollHeight: number; clientHeight: number } | null {
+		if (!previewContainer) return null;
+		return {
+			scrollTop: previewContainer.scrollTop,
+			scrollHeight: previewContainer.scrollHeight,
+			clientHeight: previewContainer.clientHeight
+		};
 	}
 
 	// Method to scroll to a specific source line
