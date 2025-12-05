@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	import type { FileTreeItem } from '$lib/appState.svelte';
 	import { appState } from '$lib/appState.svelte';
 	import FileTree from './FileTree.svelte';
@@ -11,10 +12,15 @@
 		dragOverItem?: FileTreeItem | null;
 		setDragOverItem?: (item: FileTreeItem | null) => void;
 		parentFolderId?: number | null;
-		sharedCreatingType?: { value: 'file' | 'folder' | null };
-		sharedCreatingInFolder?: { value: number | null };
-		sharedCreateValue?: { value: string };
-		sharedCreateInputRef?: { value: HTMLInputElement | null };
+		sharedState?: {
+			creatingType: 'file' | 'folder' | null;
+			creatingInFolder: number | null;
+			createValue: string;
+			createInputRef: HTMLInputElement | null;
+			renamingItem: FileTreeItem | null;
+			renameValue: string;
+		};
+		setSharedState?: (updates: Partial<Props['sharedState']>) => void;
 	}
 
 	let { 
@@ -25,35 +31,78 @@
 		dragOverItem: parentDragOverItem,
 		setDragOverItem: parentSetDragOverItem,
 		parentFolderId = null,
-		sharedCreatingType,
-		sharedCreatingInFolder,
-		sharedCreateValue,
-		sharedCreateInputRef
+		sharedState,
+		setSharedState
 	}: Props = $props();
 
-	// Context menu and rename state
+	// Context menu state
 	let contextMenu = $state<{ x: number; y: number; item: FileTreeItem | null } | null>(null);
-	let renamingItem = $state<FileTreeItem | null>(null);
-	let renameValue = $state<string>('');
 	
-	// Creation state (like VS Code's inline creation)
+	// Creation and rename state (shared across tree)
 	// At root level, create local state, otherwise use shared state
 	const isRoot = depth === 0;
+	
+	// Local state for root level
 	let localCreatingType = $state<'file' | 'folder' | null>(null);
 	let localCreatingInFolder = $state<number | null>(null);
 	let localCreateValue = $state<string>('');
 	let localCreateInputRef = $state<HTMLInputElement | null>(null);
+	let localRenamingItem = $state<FileTreeItem | null>(null);
+	let localRenameValue = $state<string>('');
 
-	// Use shared state if provided (for nested components), otherwise use local state
-	const creatingTypeObj = $derived(isRoot ? { value: localCreatingType } : sharedCreatingType!);
-	const creatingInFolderObj = $derived(isRoot ? { value: localCreatingInFolder } : sharedCreatingInFolder!);
-	const createValueObj = $derived(isRoot ? { value: localCreateValue } : sharedCreateValue!);
-	const createInputRefObj = $derived(isRoot ? { value: localCreateInputRef } : sharedCreateInputRef!);
+	// Getters for state values
+	const creatingType = $derived(isRoot ? localCreatingType : sharedState?.creatingType ?? null);
+	const creatingInFolder = $derived(isRoot ? localCreatingInFolder : sharedState?.creatingInFolder ?? null);
+	const createValue = $derived(isRoot ? localCreateValue : sharedState?.createValue ?? '');
+	const createInputRef = $derived(isRoot ? localCreateInputRef : sharedState?.createInputRef ?? null);
+	const renamingItem = $derived(isRoot ? localRenamingItem : sharedState?.renamingItem ?? null);
+	const renameValue = $derived(isRoot ? localRenameValue : sharedState?.renameValue ?? '');
 
-	let creatingType = $derived.by(() => creatingTypeObj.value);
-	let creatingInFolder = $derived.by(() => creatingInFolderObj.value);
-	let createValue = $derived.by(() => createValueObj.value);
-	let createInputRef = $derived.by(() => createInputRefObj.value);
+	// Setters for state values
+	function setCreatingType(value: 'file' | 'folder' | null) {
+		if (isRoot) localCreatingType = value;
+		else setSharedState?.({ creatingType: value });
+	}
+	function setCreatingInFolder(value: number | null) {
+		if (isRoot) localCreatingInFolder = value;
+		else setSharedState?.({ creatingInFolder: value });
+	}
+	function setCreateValue(value: string) {
+		if (isRoot) localCreateValue = value;
+		else setSharedState?.({ createValue: value });
+	}
+	function setCreateInputRef(value: HTMLInputElement | null) {
+		if (isRoot) localCreateInputRef = value;
+		else setSharedState?.({ createInputRef: value });
+	}
+	function setRenamingItem(value: FileTreeItem | null) {
+		if (isRoot) localRenamingItem = value;
+		else setSharedState?.({ renamingItem: value });
+	}
+	function setRenameValue(value: string) {
+		if (isRoot) localRenameValue = value;
+		else setSharedState?.({ renameValue: value });
+	}
+	
+	// Create shared state object to pass to children
+	const childSharedState = $derived({
+		creatingType: localCreatingType,
+		creatingInFolder: localCreatingInFolder,
+		createValue: localCreateValue,
+		createInputRef: localCreateInputRef,
+		renamingItem: localRenamingItem,
+		renameValue: localRenameValue
+	});
+	
+	function handleSetSharedState(updates: Partial<Props['sharedState']>) {
+		if (!updates) return;
+		if (updates.creatingType !== undefined) localCreatingType = updates.creatingType;
+		if (updates.creatingInFolder !== undefined) localCreatingInFolder = updates.creatingInFolder;
+		if (updates.createValue !== undefined) localCreateValue = updates.createValue;
+		if (updates.createInputRef !== undefined) localCreateInputRef = updates.createInputRef;
+		if (updates.renamingItem !== undefined) localRenamingItem = updates.renamingItem;
+		if (updates.renameValue !== undefined) localRenameValue = updates.renameValue;
+	}
 	
 	// Svelte action to focus input and store ref
 	function focusInput(node: HTMLInputElement) {
@@ -66,11 +115,102 @@
 			}
 		};
 	}
+	
+	// Svelte action to focus rename input
+	function focusRenameInput(node: HTMLInputElement) {
+		node.focus();
+		// Select filename without extension for files
+		const value = node.value;
+		const lastDot = value.lastIndexOf('.');
+		if (lastDot > 0) {
+			node.setSelectionRange(0, lastDot);
+		} else {
+			node.select();
+		}
+		return {};
+	}
 
 	// Expose method for external components (like Sidebar buttons) to trigger creation
-	export function startCreatingFromExternal(type: 'file' | 'folder', folderId: number | null = null) {
+	// Creates in the same folder as the currently active file (VS Code style - instant create + rename)
+	export async function startCreatingFromExternal(type: 'file' | 'folder', folderId: number | null = null) {
 		if (isRoot) {
-			startCreating(type, folderId);
+			// If no folderId provided, use the active file's folder
+			const targetFolderId = folderId ?? appState.activeFileFolderId;
+			await createAndRename(type, targetFolderId);
+		}
+	}
+	
+	// VS Code style: Create immediately with default name, then enter rename mode
+	async function createAndRename(type: 'file' | 'folder', folderId: number | null = null) {
+		closeContextMenu();
+		
+		// If creating in a folder, make sure it's open
+		if (folderId !== null) {
+			// Find folder in the tree recursively
+			const findFolder = (items: FileTreeItem[]): FileTreeItem | undefined => {
+				for (const item of items) {
+					if (item.type === 'folder' && item.id === folderId) return item;
+					if (item.children) {
+						const found = findFolder(item.children);
+						if (found) return found;
+					}
+				}
+				return undefined;
+			};
+			const folder = findFolder(appState.fileTree);
+			if (folder && !folder.isOpen) {
+				await appState.toggleFolder(folderId);
+			}
+		}
+		
+		try {
+			let newItemId: number;
+			let newItemName: string;
+			
+			if (type === 'file') {
+				// Create file with default name without .md (autoRename handles duplicates)
+				newItemId = await appState.newFile(folderId, 'New File');
+				// Get the actual name (might be "New File 1" etc)
+				const newFile = appState.files.find(f => f.id === newItemId);
+				newItemName = newFile?.title ?? 'New File';
+			} else {
+				// Create folder with default name (autoRename handles duplicates)
+				newItemId = await appState.newFolder('New Folder', folderId);
+				// Get the actual name (might be "New Folder 1" etc)
+				const newFolder = appState.folders.find(f => f.id === newItemId);
+				newItemName = newFolder?.name ?? 'New Folder';
+			}
+			
+			// Wait for DOM to update after state changes
+			await tick();
+			
+			// Enter rename mode for the newly created item
+			// Use direct local state setter at root level for reliability
+			if (isRoot) {
+				localRenamingItem = {
+					type,
+					id: newItemId,
+					name: newItemName,
+					parentId: folderId
+				};
+				localRenameValue = newItemName;
+			} else {
+				// For non-root, use the shared state setter
+				setSharedState?.({
+					renamingItem: {
+						type,
+						id: newItemId,
+						name: newItemName,
+						parentId: folderId
+					},
+					renameValue: newItemName
+				});
+			}
+		} catch (error) {
+			console.error('Failed to create:', error);
+			if (error instanceof Error) {
+				alert(error.message);
+			}
 		}
 	}
 
@@ -90,7 +230,7 @@
 	}
 
 	function handleFileClick(item: FileTreeItem) {
-		if (renamingItem?.id === item.id) return; // Don't select while renaming
+		if (renamingItem?.id === item.id && renamingItem?.type === item.type) return; // Don't select while renaming
 		if (item.type === 'file') {
 			appState.selectFile(item.id);
 		} else {
@@ -116,24 +256,27 @@
 	}
 
 	function handleRename(item: FileTreeItem) {
-		renamingItem = item;
-		renameValue = item.name;
+		setRenamingItem(item);
+		setRenameValue(item.name);
 		closeContextMenu();
 	}
 
 	async function submitRename() {
-		if (!renamingItem || !renameValue.trim()) {
-			renamingItem = null;
+		const currentRenamingItem = renamingItem;
+		const currentRenameValue = renameValue;
+		
+		if (!currentRenamingItem || !currentRenameValue.trim()) {
+			setRenamingItem(null);
 			return;
 		}
 
 		try {
-			if (renamingItem.type === 'file') {
-				await appState.renameFile(renamingItem.id, renameValue.trim());
+			if (currentRenamingItem.type === 'file') {
+				await appState.renameFile(currentRenamingItem.id, currentRenameValue.trim());
 			} else {
-				await appState.renameFolder(renamingItem.id, renameValue.trim());
+				await appState.renameFolder(currentRenamingItem.id, currentRenameValue.trim());
 			}
-			renamingItem = null;
+			setRenamingItem(null);
 		} catch (error) {
 			// Show error to user
 			if (error instanceof Error) {
@@ -148,8 +291,12 @@
 			event.preventDefault();
 			submitRename();
 		} else if (event.key === 'Escape') {
-			renamingItem = null;
+			setRenamingItem(null);
 		}
+	}
+
+	function updateRenameValue(value: string) {
+		setRenameValue(value);
 	}
 
 	async function handleDelete(item: FileTreeItem) {
@@ -169,9 +316,9 @@
 
 	// Handle creating new file/folder (VS Code style)
 	async function startCreating(type: 'file' | 'folder', folderId: number | null = null) {
-		creatingTypeObj.value = type;
-		creatingInFolderObj.value = folderId;
-		createValueObj.value = '';
+		setCreatingType(type);
+		setCreatingInFolder(folderId);
+		setCreateValue('');
 		closeContextMenu();
 		
 		// If creating in a folder, make sure it's open
@@ -184,7 +331,7 @@
 		
 		// Focus the input after it's rendered
 		setTimeout(() => {
-			const inputRef = createInputRefObj.value;
+			const inputRef = createInputRef;
 			if (inputRef) {
 				inputRef.focus();
 			}
@@ -192,20 +339,25 @@
 	}
 
 	async function submitCreate() {
-		const type = creatingTypeObj.value;
-		const value = createValueObj.value;
-		const folderId = creatingInFolderObj.value;
+		const type = creatingType;
+		let value = createValue.trim();
+		const folderId = creatingInFolder;
 		
-		if (!type || !value.trim()) {
+		if (!type) {
 			cancelCreate();
 			return;
+		}
+		
+		// Use default name if empty
+		if (!value) {
+			value = type === 'file' ? 'New File' : 'New Folder';
 		}
 
 		try {
 			if (type === 'file') {
-				await appState.newFile(folderId, value.trim());
+				await appState.newFile(folderId, value);
 			} else {
-				const newId = await appState.newFolder(value.trim(), folderId);
+				const newId = await appState.newFolder(value, folderId);
 				// Open the parent folder if needed
 				if (folderId !== null) {
 					const folder = appState.fileTree.find(f => f.id === folderId);
@@ -225,10 +377,10 @@
 	}
 
 	function cancelCreate() {
-		creatingTypeObj.value = null;
-		creatingInFolderObj.value = null;
-		createValueObj.value = '';
-		createInputRefObj.value = null;
+		setCreatingType(null);
+		setCreatingInFolder(null);
+		setCreateValue('');
+		setCreateInputRef(null);
 	}
 
 	function handleCreateKeydown(event: KeyboardEvent) {
@@ -241,11 +393,7 @@
 	}
 	
 	function updateCreateValue(value: string) {
-		createValueObj.value = value;
-	}
-	
-	function setCreateInputRef(ref: HTMLInputElement | null) {
-		createInputRefObj.value = ref;
+		setCreateValue(value);
 	}
 
 	// Drag and Drop handlers
@@ -396,7 +544,7 @@
 		</li>
 	{/if}
 	
-	{#each items as item (item.id)}
+	{#each items as item (`${item.type}-${item.id}`)}
 		<li class="tree-item">
 			<button
 				class="tree-button"
@@ -431,14 +579,16 @@
 						</svg>
 					{/if}
 				</span>
-				{#if renamingItem?.id === item.id}
+				{#if renamingItem?.id === item.id && renamingItem?.type === item.type}
 					<!-- svelte-ignore a11y_autofocus -->
 					<input
 						type="text"
 						class="rename-input"
-						bind:value={renameValue}
+						value={renameValue}
+						oninput={(e) => updateRenameValue(e.currentTarget.value)}
 						onkeydown={handleRenameKeydown}
 						onblur={submitRename}
+						use:focusRenameInput
 						autofocus
 					/>
 				{:else}
@@ -509,10 +659,8 @@
 						}}
 						dragOverItem={isRoot ? localDragOverItem : parentDragOverItem}
 						setDragOverItem={setDragOverItem}
-						sharedCreatingType={creatingTypeObj}
-						sharedCreatingInFolder={creatingInFolderObj}
-						sharedCreateValue={createValueObj}
-						sharedCreateInputRef={createInputRefObj}
+						sharedState={isRoot ? childSharedState : sharedState}
+						setSharedState={isRoot ? handleSetSharedState : setSharedState}
 					/>
 				{/if}
 			{/if}
@@ -528,13 +676,13 @@
 	>
 		{#if contextMenu.item === null}
 			<!-- Root context menu -->
-			<button class="context-item" onclick={() => startCreating('file', null)}>
+			<button class="context-item" onclick={() => createAndRename('file', null)}>
 				<svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
 					<path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/>
 				</svg>
 				New File
 			</button>
-			<button class="context-item" onclick={() => startCreating('folder', null)}>
+			<button class="context-item" onclick={() => createAndRename('folder', null)}>
 				<svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
 					<path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/>
 				</svg>
@@ -543,7 +691,20 @@
 		{:else}
 			<!-- Item context menu -->
 			{#if contextMenu.item.type === 'file'}
-				<!-- For files, show rename and delete at top -->
+				<!-- For files, show creation options in the same folder -->
+				<button class="context-item" onclick={() => createAndRename('file', contextMenu!.item!.parentId)}>
+					<svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+						<path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/>
+					</svg>
+					New File
+				</button>
+				<button class="context-item" onclick={() => createAndRename('folder', contextMenu!.item!.parentId)}>
+					<svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+						<path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/>
+					</svg>
+					New Folder
+				</button>
+				<div class="context-separator"></div>
 				<button class="context-item" onclick={() => handleRename(contextMenu!.item!)}>
 					<svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
 						<path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
@@ -558,13 +719,13 @@
 				</button>
 			{:else if contextMenu.item.type === 'folder'}
 				<!-- For folders, show creation options first, then rename/delete -->
-				<button class="context-item" onclick={() => startCreating('file', contextMenu!.item!.id)}>
+				<button class="context-item" onclick={() => createAndRename('file', contextMenu!.item!.id)}>
 					<svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
 						<path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/>
 					</svg>
 					New File
 				</button>
-				<button class="context-item" onclick={() => startCreating('folder', contextMenu!.item!.id)}>
+				<button class="context-item" onclick={() => createAndRename('folder', contextMenu!.item!.id)}>
 					<svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
 						<path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/>
 					</svg>

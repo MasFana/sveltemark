@@ -2086,15 +2086,15 @@
 
 	.editor-context-menu {
 		position: fixed;
-		background: #2d2d30;
-		border: 1px solid #3e3e42;
-		border-radius: 5px;
-		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.8);
+		background: #161b22;
+		border: 1px solid #30363d;
+		border-radius: 6px;
+		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 		z-index: 10000;
 		min-width: 180px;
 		max-width: 300px;
 		overflow: visible;
-		padding: 2px 0;
+		padding: 4px 0;
 	}
 
 	.category-wrapper {
@@ -2105,29 +2105,30 @@
 		position: absolute;
 		top: 0;
 		left: 100%;
-		background: #2d2d30;
-		border: 1px solid #3e3e42;
-		border-radius: 5px;
-		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.8);
+		background: #161b22;
+		border: 1px solid #30363d;
+		border-radius: 6px;
+		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 		z-index: 10001;
 		min-width: 160px;
 		max-width: 250px;
 		overflow-y: auto;
 		max-height: 500px;
-		padding: 2px 0;
+		padding: 4px 0;
 		margin-left: -1px;
 	}
 
 	.context-item {
 		display: flex;
 		align-items: center;
-		gap: 6px;
+		gap: 8px;
 		width: 100%;
-		padding: 4px 10px;
+		padding: 6px 12px;
 		background: transparent;
 		border: none;
-		color: #d4d4d4;
-		font-size: 11px;
+		color: #c9d1d9;
+		font-size: 13px;
+		font-family: inherit;
 		text-align: left;
 		cursor: pointer;
 		transition: background-color 0.08s ease;
@@ -2135,7 +2136,7 @@
 	}
 
 	.context-item:hover {
-		background: #404040;
+		background: #1f6feb;
 	}
 
 	.context-item svg {
@@ -2147,15 +2148,15 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 6px;
+		gap: 8px;
 		white-space: nowrap;
-		padding: 5px 8px;
+		padding: 6px 12px;
 		font-weight: 500;
 	}
 
 	.category-label {
 		flex: 1;
-		font-size: 10px;
+		font-size: 11px;
 		font-weight: 600;
 		letter-spacing: 0.3px;
 		text-transform: uppercase;
@@ -2173,11 +2174,11 @@
 
 	.item-label {
 		flex: 1;
-		font-size: 11px;
+		font-size: 13px;
 	}
 
 	.item-shortcut {
-		font-size: 9px;
+		font-size: 11px;
 		color: #6a6a6a;
 		margin-left: 8px;
 		text-align: right;
@@ -2187,13 +2188,13 @@
 
 	.context-separator {
 		height: 1px;
-		background: #3e3e42;
-		margin: 2px 0;
+		background: #30363d;
+		margin: 4px 0;
 	}
 
 	/* Formatted item styles for visual previews */
 	.context-item-formatted {
-		font-size: 11px;
+		font-size: 13px;
 	}
 
 	.item-bold .item-label {
@@ -2296,7 +2297,7 @@
 
 	.help-header h2 {
 		margin: 0;
-		font-size: 12px;
+		font-size: 16px;
 		font-weight: 600;
 		color: #c9d1d9;
 	}
@@ -2363,7 +2364,7 @@
 
 	.help-section h3 {
 		margin: 0;
-		font-size: 10px;
+		font-size: 13px;
 		font-weight: 600;
 		color: #58a6ff;
 		text-transform: uppercase;
@@ -2390,7 +2391,7 @@
 
 	.help-key {
 		font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-		font-size: 10px;
+		font-size: 13px;
 		font-weight: 500;
 		color: #79c0ff;
 		min-width: fit-content;
@@ -2398,7 +2399,7 @@
 	}
 
 	.help-desc {
-		font-size: 11px;
+		font-size: 14px;
 		color: #c9d1d9;
 		margin-left: auto;
 		padding-left: 12px;
@@ -2406,11 +2407,11 @@
 	}
 
 	.help-footer {
-		padding: 6px 12px;
+		padding: 8px 12px;
 		text-align: center;
 		border-top: 1px solid #30363d;
 		color: #8b949e;
-		font-size: 10px;
+		font-size: 13px;
 		background: #161b22;
 		position: sticky;
 		bottom: 0;
@@ -2432,7 +2433,7 @@
 
 	.help-footer kbd {
 		font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-		font-size: 9px;
+		font-size: 12px;
 		font-weight: 500;
 		color: #79c0ff;
 		margin: 0 2px;

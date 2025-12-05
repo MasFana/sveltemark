@@ -224,9 +224,9 @@ async function saveNow(): Promise<void> {
     }
 }
 
-async function newFolder(name: string, parentId: number | null = null): Promise<number> {
+async function newFolder(name: string, parentId: number | null = null, autoRename: boolean = true): Promise<number> {
     try {
-        const id = await createFolder(name, parentId);
+        const id = await createFolder(name, parentId, autoRename);
         await refreshData();
         return id;
     } catch (error) {
@@ -235,9 +235,9 @@ async function newFolder(name: string, parentId: number | null = null): Promise<
     }
 }
 
-async function newFile(folderId: number | null, title: string): Promise<number> {
+async function newFile(folderId: number | null, title: string, autoRename: boolean = true): Promise<number> {
     try {
-        const id = await createFile(folderId, title, '');
+        const id = await createFile(folderId, title, '', autoRename);
         await refreshData();
         await selectFile(id);
         return id;
@@ -478,6 +478,9 @@ export const appState = {
     // Getters (reactive)
     get activeFileId() {
         return activeFileId;
+    },
+    get activeFileFolderId() {
+        return activeFile?.folderId ?? null;
     },
     get buffer() {
         return buffer;

@@ -39,14 +39,35 @@ export async function folderNameExists(
     parentId: number | null,
     excludeId?: number
 ): Promise<boolean> {
-    const folders = await db.folders
-        .where('parentId')
-        .equals(parentId ?? null as any)
-        .toArray();
+    // Dexie doesn't support null as a key, so we need to filter manually
+    let folders: Folder[];
+    if (parentId === null) {
+        folders = await db.folders.filter(f => f.parentId === null).toArray();
+    } else {
+        folders = await db.folders.where('parentId').equals(parentId).toArray();
+    }
 
     return folders.some(folder =>
         folder.name === name && folder.id !== excludeId
     );
+}
+
+// Generate unique folder name with number suffix if needed
+export async function generateUniqueFolderName(
+    baseName: string,
+    parentId: number | null,
+    excludeId?: number
+): Promise<string> {
+    const exists = await folderNameExists(baseName, parentId, excludeId);
+    if (!exists) return baseName;
+
+    let counter = 1;
+    let newName = `${baseName} ${counter}`;
+    while (await folderNameExists(newName, parentId, excludeId)) {
+        counter++;
+        newName = `${baseName} ${counter}`;
+    }
+    return newName;
 }
 
 // Check if a file name already exists in the same folder
@@ -55,28 +76,63 @@ export async function fileNameExists(
     folderId: number | null,
     excludeId?: number
 ): Promise<boolean> {
-    const files = await db.files
-        .where('folderId')
-        .equals(folderId ?? null as any)
-        .toArray();
+    // Dexie doesn't support null as a key, so we need to filter manually
+    let files: File[];
+    if (folderId === null) {
+        files = await db.files.filter(f => f.folderId === null).toArray();
+    } else {
+        files = await db.files.where('folderId').equals(folderId).toArray();
+    }
 
     return files.some(file =>
         file.title === title && file.id !== excludeId
     );
 }
 
+// Generate unique file name with number suffix if needed
+export async function generateUniqueFileName(
+    baseName: string,
+    folderId: number | null,
+    excludeId?: number
+): Promise<string> {
+    const exists = await fileNameExists(baseName, folderId, excludeId);
+    if (!exists) return baseName;
+
+    // Handle file extension
+    const lastDot = baseName.lastIndexOf('.');
+    const hasExtension = lastDot > 0;
+    const nameWithoutExt = hasExtension ? baseName.substring(0, lastDot) : baseName;
+    const extension = hasExtension ? baseName.substring(lastDot) : '';
+
+    let counter = 1;
+    let newName = `${nameWithoutExt} ${counter}${extension}`;
+    while (await fileNameExists(newName, folderId, excludeId)) {
+        counter++;
+        newName = `${nameWithoutExt} ${counter}${extension}`;
+    }
+    return newName;
+}
+
 export async function createFolder(
     name: string,
-    parentId: number | null = null
+    parentId: number | null = null,
+    autoRename: boolean = false
 ): Promise<number> {
-    // Check for duplicate name
-    const exists = await folderNameExists(name, parentId);
-    if (exists) {
-        throw new Error(`A folder named "${name}" already exists in this location.`);
+    let finalName = name;
+
+    // Auto-generate unique name if requested
+    if (autoRename) {
+        finalName = await generateUniqueFolderName(name, parentId);
+    } else {
+        // Check for duplicate name
+        const exists = await folderNameExists(name, parentId);
+        if (exists) {
+            throw new Error(`A folder named "${name}" already exists in this location.`);
+        }
     }
 
     const id = await db.folders.add({
-        name,
+        name: finalName,
         parentId,
         isOpen: true
     });
@@ -86,18 +142,26 @@ export async function createFolder(
 export async function createFile(
     folderId: number | null,
     title: string,
-    content: string = ''
+    content: string = '',
+    autoRename: boolean = false
 ): Promise<number> {
-    // Check for duplicate name
-    const exists = await fileNameExists(title, folderId);
-    if (exists) {
-        throw new Error(`A file named "${title}" already exists in this location.`);
+    let finalTitle = title;
+
+    // Auto-generate unique name if requested
+    if (autoRename) {
+        finalTitle = await generateUniqueFileName(title, folderId);
+    } else {
+        // Check for duplicate name
+        const exists = await fileNameExists(title, folderId);
+        if (exists) {
+            throw new Error(`A file named "${title}" already exists in this location.`);
+        }
     }
 
     const now = new Date();
     const id = await db.files.add({
         folderId,
-        title,
+        title: finalTitle,
         content,
         createdAt: now,
         updatedAt: now
@@ -173,7 +237,18 @@ export async function toggleFolderOpen(id: number): Promise<void> {
 }
 
 export async function moveFile(fileId: number, newFolderId: number | null): Promise<void> {
-    await db.files.update(fileId, { folderId: newFolderId });
+    const file = await db.files.get(fileId);
+    if (!file) {
+        throw new Error('File not found');
+    }
+
+    // Check for duplicate name in destination and rename if needed
+    const uniqueName = await generateUniqueFileName(file.title, newFolderId, fileId);
+
+    await db.files.update(fileId, {
+        folderId: newFolderId,
+        title: uniqueName
+    });
 }
 
 export async function moveFolder(folderId: number, newParentId: number | null): Promise<void> {
@@ -188,7 +263,19 @@ export async function moveFolder(folderId: number, newParentId: number | null): 
             currentId = parentFolder?.parentId ?? null;
         }
     }
-    await db.folders.update(folderId, { parentId: newParentId });
+
+    const folder = await db.folders.get(folderId);
+    if (!folder) {
+        throw new Error('Folder not found');
+    }
+
+    // Check for duplicate name in destination and rename if needed
+    const uniqueName = await generateUniqueFolderName(folder.name, newParentId, folderId);
+
+    await db.folders.update(folderId, {
+        parentId: newParentId,
+        name: uniqueName
+    });
 }
 
 export async function getAllFolders(): Promise<Folder[]> {
