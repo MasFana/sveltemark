@@ -140,8 +140,6 @@ pnpm preview
 
 | Shortcut       | Action                       |
 | -------------- | ---------------------------- |
-| `Ctrl+Shift+P` | Toggle preview mode          |
-| `Ctrl+Alt+D`   | Toggle distraction-free mode |
 | `Ctrl+0`       | Reset zoom                   |
 | `F11`          | Enter fullscreen             |
 
