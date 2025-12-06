@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { appState, Editor, Preview, Sidebar, Toolbar } from '$lib';
+	import GithubSlugger from 'github-slugger';
 	import 'katex/dist/katex.min.css';
 	import 'github-markdown-css/github-markdown-dark.css';
 	import 'highlight.js/styles/github-dark.css';
@@ -65,34 +66,23 @@
 		activeHeadingId = currentActive;
 	}
 
-	// Generate slug matching rehype-slug's GitHub-style algorithm (github-slugger)
-	function generateSlug(text: string): string {
-		return text
-			.toLowerCase()
-			.trim()
-			// Remove HTML entities like &amp;
-			.replace(/&amp;/g, '')
-			.replace(/&[a-z]+;/g, '')
-			// Remove & (github-slugger removes it, doesn't replace)
-			.replace(/&/g, '')
-			// Remove special chars (except alphanumeric, spaces, existing hyphens)
-			.replace(/[^\w\s-]/g, '')
-			// Replace spaces with hyphens (keeps multiple spaces as multiple hyphens)
-			.replace(/\s/g, '-')
-			// Remove leading/trailing hyphens
-			.replace(/^-+|-+$/g, '');
-	}
-
 	// Extract TOC from markdown content
+	// Use github-slugger to match exactly what rehype-slug generates (handles duplicates)
 	$effect(() => {
 		if (appState.buffer) {
 			const headingRegex = /^(#{1,6})\s+(.+)$/gm;
 			const items: TOCItem[] = [];
+			const slugger = new GithubSlugger();
 			let match;
 			while ((match = headingRegex.exec(appState.buffer)) !== null) {
 				const level = match[1].length;
 				const text = match[2].trim();
-				const id = generateSlug(text);
+				// Use github-slugger's slug() method which automatically handles:
+				// - Converting to lowercase
+				// - Removing/replacing special characters
+				// - Handling duplicates by appending -1, -2, etc.
+				// This matches exactly what rehype-slug does in the HTML
+				const id = slugger.slug(text);
 				items.push({ level, text, id });
 			}
 			tocItems = items;
