@@ -257,7 +257,17 @@
 	let scrollSource: 'editor' | 'preview' | null = null;
 	let scrollSourceTimeout: ReturnType<typeof setTimeout> | null = null;
 	let measureSectionsTimeout: ReturnType<typeof setTimeout> | null = null;
+	let scrollRemeasureTimeout: ReturnType<typeof setTimeout> | null = null;
 	let isResizingLayout = $derived(isResizingSidebar || isResizingEditor || isResizingTOC);
+
+	// Debounced re-measure to refresh CodeMirror's height map as the user scrolls
+	function scheduleScrollRemeasure() {
+		if (scrollRemeasureTimeout) return;
+		scrollRemeasureTimeout = setTimeout(() => {
+			syncSectionDimensions();
+			scrollRemeasureTimeout = null;
+		}, 120);
+	}
 
 	function handleEditorChange(content: string) {
 		appState.updateBuffer(content);
@@ -490,6 +500,7 @@
 		if (!appState.syncScrollEnabled) return;
 		if (scrollSource === 'preview') return;
 		if (isResizingLayout) return; // Don't sync during resize
+		scheduleScrollRemeasure();
 		
 		// Skip micro-updates
 		const threshold = getScrollSyncThreshold();
@@ -518,6 +529,7 @@
 		if (!appState.syncScrollEnabled) return;
 		if (scrollSource === 'editor') return;
 		if (isResizingLayout) return; // Don't sync during resize
+		scheduleScrollRemeasure();
 		
 		// Skip micro-updates
 		const threshold = getScrollSyncThreshold();
