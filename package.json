@@ -63,6 +63,7 @@
 		"dexie": "^4.2.1",
 		"github-markdown-css": "^5.8.1",
 		"highlight.js": "^11.11.1",
+		"jszip": "^3.10.1",
 		"katex": "^0.16.25",
 		"mermaid": "^11.12.1",
 		"rehype-highlight": "^7.0.2",

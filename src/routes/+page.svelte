@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { appState, Editor, Preview, Sidebar, Toolbar } from '$lib';
-	import GithubSlugger from 'github-slugger';
+	import { extractTableOfContents } from '$lib/markdown';
 	import 'katex/dist/katex.min.css';
 	import 'github-markdown-css/github-markdown-dark.css';
 	import 'highlight.js/styles/github-dark.css';
@@ -66,26 +66,17 @@
 		activeHeadingId = currentActive;
 	}
 
-	// Extract TOC from markdown content
-	// Use github-slugger to match exactly what rehype-slug generates (handles duplicates)
+	// Extract TOC from markdown content using AST-based extraction
+	// This properly handles duplicates and ignores # symbols in code blocks
+	// Uses the same slug generation as the HTML renderer (github-slugger)
 	$effect(() => {
 		if (appState.buffer) {
-			const headingRegex = /^(#{1,6})\s+(.+)$/gm;
-			const items: TOCItem[] = [];
-			const slugger = new GithubSlugger();
-			let match;
-			while ((match = headingRegex.exec(appState.buffer)) !== null) {
-				const level = match[1].length;
-				const text = match[2].trim();
-				// Use github-slugger's slug() method which automatically handles:
-				// - Converting to lowercase
-				// - Removing/replacing special characters
-				// - Handling duplicates by appending -1, -2, etc.
-				// This matches exactly what rehype-slug does in the HTML
-				const id = slugger.slug(text);
-				items.push({ level, text, id });
-			}
-			tocItems = items;
+			const tocFromAST = extractTableOfContents(appState.buffer);
+			tocItems = tocFromAST.map(item => ({
+				level: item.level,
+				text: item.text,
+				id: item.id
+			}));
 		} else {
 			tocItems = [];
 		}

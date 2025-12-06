@@ -7,7 +7,13 @@ export * from './db';
 export { appState, type FileTreeItem } from './appState.svelte';
 
 // Markdown processor
-export { processMarkdown, processMarkdownSync, processor } from './markdown';
+export {
+    processMarkdown,
+    processMarkdownSync,
+    processor,
+    extractTableOfContents,
+    type HeadingInfo
+} from './markdown';
 
 // Components
 export { default as Editor } from './components/Editor.svelte';

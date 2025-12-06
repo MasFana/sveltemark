@@ -296,6 +296,8 @@ export async function getAllFiles(): Promise<File[]> {
 
 // Welcome content template
 export const WELCOME_CONTENT = `# Welcome to SvelteMark! 📝
+    
+![alt](/logo.webp)
 
 **Your local-first, privacy-focused markdown editor** built with Svelte 5.
 
@@ -394,11 +396,11 @@ export async function initializeDB(): Promise<void> {
         // Create a default folder
         const folderId = await createFolder('Notes');
         // Create a welcome file
-        await createFile(folderId, 'Welcome.md', WELCOME_CONTENT);
+        await createFile(folderId, 'Welcome', WELCOME_CONTENT);
     }
 }
 
-// Reset or create Welcome.md file
+// Reset or create Welcome file
 export async function resetWelcomeFile(): Promise<number> {
     // Check if Notes folder exists
     let notesFolder = await db.folders.where('name').equals('Notes').first();
@@ -413,10 +415,10 @@ export async function resetWelcomeFile(): Promise<number> {
         throw new Error('Could not find or create Notes folder');
     }
 
-    // Check if Welcome.md already exists
+    // Check if Welcome already exists
     const existingWelcome = await db.files
         .where('folderId').equals(notesFolder.id)
-        .and(f => f.title === 'Welcome.md')
+        .and(f => f.title === 'Welcome')
         .first();
 
     if (existingWelcome?.id) {
@@ -424,7 +426,7 @@ export async function resetWelcomeFile(): Promise<number> {
         await updateFileContent(existingWelcome.id, WELCOME_CONTENT);
         return existingWelcome.id;
     } else {
-        // Create new Welcome.md
-        return await createFile(notesFolder.id, 'Welcome.md', WELCOME_CONTENT);
+        // Create new Welcome
+        return await createFile(notesFolder.id, 'Welcome', WELCOME_CONTENT);
     }
 }

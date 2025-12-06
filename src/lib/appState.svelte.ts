@@ -365,7 +365,7 @@ function setSyncScroll(value: boolean): void {
     }
 }
 
-// Reset Welcome.md to original content
+// Reset Welcome to original content
 async function showHelp(): Promise<void> {
     const fileId = await resetWelcomeFile();
     await refreshData();

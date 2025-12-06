@@ -30,11 +30,11 @@
 		title: 'SvelteMark - Privacy-First Markdown Editor',
 		description:
 			'A privacy-first, open-source, local-only markdown editor built with Svelte 5. Your notes never leave your device. No accounts, no tracking, no cloud.',
-		url: 'https://sveltemark.fana.my.id',
+		url: 'https://sm.fana.my.id',
 		siteName: 'SvelteMark',
 		locale: 'en_US',
 		type: 'website',
-		twitterHandle: '@masfana',
+		twitterHandle: '@masfana_',
 		themeColor: '#0d1117',
 		keywords: [
 			'markdown editor',

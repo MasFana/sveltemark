@@ -2,7 +2,9 @@
 	import { tick } from 'svelte';
 	import type { FileTreeItem } from '$lib/appState.svelte';
 	import { appState } from '$lib/appState.svelte';
+	import { db } from '$lib/db';
 	import FileTree from './FileTree.svelte';
+	import JSZip from 'jszip';
 
 	interface Props {
 		items: FileTreeItem[];
@@ -253,6 +255,93 @@
 
 	function closeContextMenu() {
 		contextMenu = null;
+	}
+
+	// Download file as markdown
+	async function handleDownloadFile(item: FileTreeItem) {
+		if (item.type !== 'file' || item.id === undefined) return;
+		closeContextMenu();
+
+		try {
+			const file = await db.files.get(item.id);
+			if (!file) return;
+
+			// Create blob and download
+			const blob = new Blob([file.content], { type: 'text/markdown' });
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = `${file.title}.md`;
+			a.click();
+			URL.revokeObjectURL(url);
+		} catch (error) {
+			console.error('Failed to download file:', error);
+		}
+	}
+
+	// Download folder as ZIP file
+	async function handleDownloadFolder(item: FileTreeItem) {
+		if (item.type !== 'folder' || item.id === undefined) return;
+		closeContextMenu();
+
+		try {
+			const zip = new JSZip();
+			let fileCount = 0;
+			
+			// Recursively add files to ZIP
+			async function addFilesToZip(folderId: number | null, zipFolder: JSZip) {
+				// Get files in current folder
+				// Dexie doesn't support null as index value, so filter manually
+				let files;
+				if (folderId === null) {
+					files = await db.files.filter(f => f.folderId === null).toArray();
+				} else {
+					files = await db.files.where('folderId').equals(folderId).toArray();
+				}
+				
+				for (const file of files) {
+					zipFolder.file(`${file.title}.md`, file.content);
+					fileCount++;
+				}
+
+				// Get subfolders
+				// Dexie doesn't support null as index value, so filter manually
+				let subfolders;
+				if (folderId === null) {
+					subfolders = await db.folders.filter(f => f.parentId === null).toArray();
+				} else {
+					subfolders = await db.folders.where('parentId').equals(folderId).toArray();
+				}
+				
+				for (const subfolder of subfolders) {
+					if (subfolder.id !== undefined) {
+						// Create subfolder in ZIP
+						const subZipFolder = zipFolder.folder(subfolder.name);
+						if (subZipFolder) {
+							await addFilesToZip(subfolder.id, subZipFolder);
+						}
+					}
+				}
+			}
+
+			await addFilesToZip(item.id, zip);
+
+			if (fileCount === 0) {
+				alert('This folder is empty');
+				return;
+			}
+
+			// Generate ZIP file
+			const zipBlob = await zip.generateAsync({ type: 'blob' });
+			const url = URL.createObjectURL(zipBlob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = `${item.name}.zip`;
+			a.click();
+			URL.revokeObjectURL(url);
+		} catch (error) {
+			console.error('Failed to download folder:', error);
+		}
 	}
 
 	function handleRename(item: FileTreeItem) {
@@ -733,6 +822,13 @@
 					New Folder
 				</button>
 				<div class="context-separator"></div>
+				<button class="context-item" onclick={() => handleDownloadFile(contextMenu!.item!)}>
+					<svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+						<path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+					</svg>
+					Download as Markdown
+				</button>
+				<div class="context-separator"></div>
 				<button class="context-item" onclick={() => handleRename(contextMenu!.item!)}>
 					<svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
 						<path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
@@ -758,6 +854,13 @@
 						<path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/>
 					</svg>
 					New Folder
+				</button>
+				<div class="context-separator"></div>
+				<button class="context-item" onclick={() => handleDownloadFolder(contextMenu!.item!)}>
+					<svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+						<path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+					</svg>
+					Download as Markdown
 				</button>
 				<div class="context-separator"></div>
 				<button class="context-item" onclick={() => handleRename(contextMenu!.item!)}>
