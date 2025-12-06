@@ -44,16 +44,21 @@
 	function updateActiveHeading() {
 		if (tocItems.length === 0) return;
 		
+		const previewPane = document.querySelector('.preview-pane');
+		if (!previewPane) return;
+		
 		const headings = tocItems.map(item => document.getElementById(item.id)).filter(Boolean) as HTMLElement[];
 		if (headings.length === 0) return;
 
 		let currentActive: string | null = null;
-		const scrollTop = document.querySelector('.preview-pane')?.scrollTop || 0;
-		const offset = 100; // Offset from top to consider heading as active
+		const previewRect = previewPane.getBoundingClientRect();
+		const offset = 100; // Offset from top of preview pane to consider heading as active
 
 		for (const heading of headings) {
 			const rect = heading.getBoundingClientRect();
-			if (rect.top <= offset) {
+			// Calculate position relative to the preview pane
+			const relativeTop = rect.top - previewRect.top;
+			if (relativeTop <= offset) {
 				currentActive = heading.id;
 			}
 		}
