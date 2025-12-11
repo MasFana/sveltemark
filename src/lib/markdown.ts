@@ -120,11 +120,15 @@ function remarkMermaid() {
 }
 
 // Preprocess markdown to convert inline $$...$$ on its own line to proper block math
+// and convert \[...\] bracket syntax to $$ block math
 // remark-math treats inline $$...$$ as text math, but users often expect it to be display math
 function preprocessDisplayMath(markdown: string): string {
     // Split into lines
     const lines = markdown.split('\n');
     const result: string[] = [];
+    let inBracketMath = false;
+    const bracketMathLines: string[] = [];
+    let bracketMathIndent = '';
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
@@ -132,6 +136,29 @@ function preprocessDisplayMath(markdown: string): string {
 
         // Get the leading whitespace/indentation to preserve it
         const leadingWhitespace = line.match(/^(\s*)/)?.[1] || '';
+
+        // Handle \[ ... \] bracket syntax for display math
+        if (trimmed === '\\[') {
+            inBracketMath = true;
+            bracketMathLines.length = 0;
+            bracketMathIndent = leadingWhitespace;
+            continue;
+        }
+
+        if (inBracketMath) {
+            if (trimmed === '\\]') {
+                // End of bracket math block - convert to $$ block
+                inBracketMath = false;
+                result.push(bracketMathIndent + '$$');
+                result.push(...bracketMathLines);
+                result.push(bracketMathIndent + '$$');
+                continue;
+            } else {
+                // Accumulate lines inside \[...\]
+                bracketMathLines.push(line);
+                continue;
+            }
+        }
 
         // Check if the line is primarily a $$...$$ math expression
         // Pattern: line that starts and ends with $$ with content in between
