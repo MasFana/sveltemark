@@ -305,14 +305,12 @@ function extractHeadingSlugsFromAST(markdown: string): Map<string, HeadingInfo> 
     try {
         const tree = parser.parse(markdown) as MdastRoot;
         const blocks = splitIntoBlocks(markdown);
-        let blockIndex = 0;
-        let globalIndex = 0;
 
         // Visit all heading nodes
         visit(tree, 'heading', (node: Heading) => {
             // Extract text content from heading ONLY (not from nested code blocks, etc)
             let text = '';
-            visit(node, 'text', (textNode: any) => {
+            visit(node, 'text', (textNode: { value: string }) => {
                 text += textNode.value;
             });
 
@@ -351,8 +349,6 @@ function extractHeadingSlugsFromAST(markdown: string): Map<string, HeadingInfo> 
                 // Also store by slug for reverse lookup
                 const slugKey = `slug-${slug}`;
                 headingInfoMap.set(slugKey, headingInfo);
-
-                globalIndex++;
             }
         });
     } catch (e) {
@@ -361,26 +357,6 @@ function extractHeadingSlugsFromAST(markdown: string): Map<string, HeadingInfo> 
     }
 
     return headingInfoMap;
-}
-
-/**
- * Extract slug mapping from full document HTML
- * Maps heading content -> generated slug ID
- */
-function extractSlugsFromHTML(html: string): Map<string, string> {
-    const slugMap = new Map<string, string>();
-    // Match heading elements with data-source-line and id attributes
-    // Pattern: <h1 id="slug-value" data-source-line="...">content</h1>
-    const headingRegex = /<h([1-6])\s+id="([^"]+)"[^>]*>(.+?)<\/h\1>/g;
-    let match;
-    while ((match = headingRegex.exec(html)) !== null) {
-        const level = match[1];
-        const id = match[2];
-        const content = match[3].replace(/<[^>]+>/g, ''); // Strip inner HTML tags
-        // Store by heading content to find duplicates
-        slugMap.set(`h${level}-${content}`, id);
-    }
-    return slugMap;
 }
 
 /**
@@ -411,10 +387,8 @@ function applySlugsToBlockHTML(blockHTML: string, slugMap: Map<string, HeadingIn
     // Find headings in block HTML and inject IDs from full document mapping
     const headingRegex = /<h([1-6])(\s+[^>]*)?>(.+?)<\/h\1>/g;
     let result = blockHTML;
-    let headingIndexInBlock = 0;
 
     result = result.replace(headingRegex, (match, level, attrs, content) => {
-        headingIndexInBlock++;
 
         // Extract plain text from HTML content (strip tags and decode entities)
         let plainText = content.replace(/<[^>]+>/g, '');
@@ -497,7 +471,7 @@ export function extractTableOfContents(markdown: string): { level: number; text:
         visit(tree, 'heading', (node: Heading) => {
             // Extract text content from heading
             let text = '';
-            visit(node, 'text', (textNode: any) => {
+            visit(node, 'text', (textNode: { value: string }) => {
                 text += textNode.value;
             });
 
