@@ -73,6 +73,12 @@
 	<meta name="language" content="English" />
 	<meta name="revisit-after" content="7 days" />
 
+	<!-- Security & Privacy -->
+	<meta name="referrer" content="strict-origin-when-cross-origin" />
+	<meta name="x-content-type-options" content="nosniff" />
+	<meta name="x-frame-options" content="SAMEORIGIN" />
+	<meta name="permissions-policy" content="interest-cohort=()" />
+
 	<!-- Favicon -->
 	<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 	<link rel="apple-touch-icon" href="/logo.webp" />
@@ -92,11 +98,15 @@
 	<meta property="og:title" content={siteConfig.title} />
 	<meta property="og:description" content={siteConfig.description} />
 	<meta property="og:image" content={ogImageUrl} />
+	<meta property="og:image:secure_url" content={ogImageUrl} />
+	<meta property="og:image:type" content="image/webp" />
 	<meta property="og:image:width" content="1200" />
 	<meta property="og:image:height" content="630" />
 	<meta property="og:image:alt" content="SvelteMark - Privacy-First Markdown Editor" />
 	<meta property="og:site_name" content={siteConfig.siteName} />
 	<meta property="og:locale" content={siteConfig.locale} />
+	<meta property="og:locale:alternate" content="en_GB" />
+	<meta property="og:locale:alternate" content="en_AU" />
 
 	<!-- Twitter -->
 	<meta name="twitter:card" content="summary_large_image" />
@@ -129,7 +139,18 @@
 		author: {
 			'@type': 'Person',
 			name: 'MasFana',
-			url: 'https://github.com/MasFana'
+			url: 'https://github.com/MasFana',
+			sameAs: ['https://twitter.com/masfana_', 'https://github.com/MasFana']
+		},
+		publisher: {
+			'@type': 'Organization',
+			name: 'SvelteMark',
+			url: 'https://sm.fana.my.id',
+			logo: {
+				'@type': 'ImageObject',
+				url: 'https://sm.fana.my.id/logo.webp'
+			},
+			sameAs: ['https://github.com/MasFana/sveltemark']
 		}
 	})}</script>`}
 
@@ -138,9 +159,12 @@
 	<meta name="apple-mobile-web-app-title" content={siteConfig.siteName} />
 	<meta name="format-detection" content="telephone=no" />
 
-	<!-- Preconnect for performance -->
+	<!-- Resource Hints for Performance -->
+	<link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+	<link rel="dns-prefetch" href="https://fonts.gstatic.com" />
 	<link rel="preconnect" href="https://fonts.googleapis.com" />
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+	<link rel="preload" href="/logo.webp" as="image" type="image/webp" />
 
 	<!-- Google Fonts - Non-render-blocking -->
 	{@html `<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" media="print" onload="this.media='all'">`}

@@ -11,18 +11,27 @@
 		content="SvelteMark editor - privacy-first markdown editor for AI-generated content. Edit markdown with Mermaid diagrams, math equations, and code highlighting. Works offline."
 	/>
 	<meta name="robots" content="index, follow" />
-
-	<!-- Open Graph -->
-	<meta property="og:title" content="SvelteMark - Markdown Editor App" />
-	<meta
-		property="og:description"
-		content="Privacy-first markdown editor for AI-generated content. Edit with Mermaid diagrams, math equations, and code highlighting."
-	/>
-	<meta property="og:type" content="website" />
-	<meta property="og:url" content="https://sm.fana.my.id/app" />
-
-	<!-- Canonical URL -->
 	<link rel="canonical" href="https://sm.fana.my.id/app" />
+
+	<!-- App Breadcrumb Schema -->
+	{@html `<script type="application/ld+json">${JSON.stringify({
+		'@context': 'https://schema.org',
+		'@type': 'BreadcrumbList',
+		itemListElement: [
+			{
+				'@type': 'ListItem',
+				position: 1,
+				name: 'Home',
+				item: 'https://sm.fana.my.id/'
+			},
+			{
+				'@type': 'ListItem',
+				position: 2,
+				name: 'Editor',
+				item: 'https://sm.fana.my.id/app'
+			}
+		]
+	})}</script>`}
 </svelte:head>
 
 {@render children()}

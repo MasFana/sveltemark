@@ -188,28 +188,18 @@
 </script>
 
 <svelte:head>
-	<!-- Override only landing page specific meta tags -->
-	<title>SvelteMark - AI Markdown Editor | Privacy-First</title>
-	<meta
-		name="description"
-		content="Privacy-first markdown editor for ChatGPT, Claude, and Gemini content. Mermaid diagrams, math equations, syntax highlighting. Works offline."
-	/>
-	
-	<!-- Landing page specific Open Graph image (uses screenshot instead of logo) -->
+	<!-- Landing page specific overrides only -->
 	<meta property="og:image" content="https://sm.fana.my.id/screenshot.webp" />
+	<meta property="og:image:secure_url" content="https://sm.fana.my.id/screenshot.webp" />
+	<meta property="og:image:type" content="image/webp" />
 	<meta property="og:image:alt" content="SvelteMark Editor Interface" />
-	<meta property="og:updated_time" content={data.modifiedDate} />
-	
-	<!-- Landing page specific Twitter image -->
 	<meta name="twitter:image" content="https://sm.fana.my.id/screenshot.webp" />
 	<meta name="twitter:image:alt" content="SvelteMark Editor Interface" />
-	
-	<!-- Landing page specific meta -->
-	<meta name="last-modified" content={data.modifiedDate} />
+	<meta property="og:updated_time" content={data.modifiedDate} />
 	<meta name="article:modified_time" content={data.modifiedDate} />
 	<meta name="article:published_time" content={data.publishDate} />
 
-	<!-- Structured Data (JSON-LD) -->
+	<!-- Enhanced Structured Data for landing page -->
 	{@html `<script type="application/ld+json">${JSON.stringify({
 		'@context': 'https://schema.org',
 		'@type': 'SoftwareApplication',
@@ -226,7 +216,8 @@
 			priceCurrency: 'USD',
 			availability: 'https://schema.org/InStock'
 		},
-		description: 'Privacy-first, open-source, local-only markdown editor for viewing and editing AI-generated content from ChatGPT, Claude, Gemini, and more. Supports Mermaid diagrams, math equations (KaTeX/LaTeX), and code syntax highlighting. Works offline as a Progressive Web App.',
+		description:
+			'Privacy-first, open-source, local-only markdown editor for viewing and editing AI-generated content from ChatGPT, Claude, Gemini, and more. Supports Mermaid diagrams, math equations (KaTeX/LaTeX), and code syntax highlighting. Works offline as a Progressive Web App.',
 		featureList: [
 			'AI-generated content support (ChatGPT, Claude, Gemini, DeepSeek, Perplexity, Mistral)',
 			'Mermaid diagram rendering (flowcharts, sequence diagrams, Gantt charts, class diagrams)',
@@ -278,7 +269,8 @@
 		license: 'https://opensource.org/licenses/MIT',
 		codeRepository: 'https://github.com/MasFana/sveltemark',
 		programmingLanguage: ['TypeScript', 'Svelte', 'JavaScript'],
-		keywords: 'markdown editor, AI markdown viewer, ChatGPT markdown, Claude markdown preview, Gemini markdown editor, privacy-first markdown, local markdown editor, offline markdown editor, Mermaid diagram editor, math equation markdown, LaTeX markdown editor, code syntax highlighting, GitHub flavored markdown, DeepSeek markdown, Perplexity markdown, progressive web app, PWA, local-first, privacy-focused'
+		keywords:
+			'markdown editor, AI markdown viewer, ChatGPT markdown, Claude markdown preview, Gemini markdown editor, privacy-first markdown, local markdown editor, offline markdown editor, Mermaid diagram editor, math equation markdown, LaTeX markdown editor, code syntax highlighting, GitHub flavored markdown, DeepSeek markdown, Perplexity markdown, progressive web app, PWA, local-first, privacy-focused'
 	})}</script>`}
 
 	<!-- Breadcrumb Structured Data -->
@@ -327,7 +319,7 @@
 				name: 'Is my data private and secure?',
 				acceptedAnswer: {
 					'@type': 'Answer',
-					text: 'Absolutely. SvelteMark runs entirely in your browser. Your documents never leave your device - there\'s no cloud storage, no tracking, no analytics, and no account required. Your privacy is guaranteed by design.'
+					text: "Absolutely. SvelteMark runs entirely in your browser. Your documents never leave your device - there's no cloud storage, no tracking, no analytics, and no account required. Your privacy is guaranteed by design."
 				}
 			},
 			{
@@ -793,11 +785,7 @@ And much more!</code
 		aria-modal="true"
 		tabindex="-1"
 	>
-		<div
-			class="modal-content"
-	
-			role="document"
-		>
+		<div class="modal-content" role="document">
 			<button type="button" class="modal-close" onclick={closeModal} aria-label="Close modal">
 				✕
 			</button>
