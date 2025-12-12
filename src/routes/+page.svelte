@@ -188,57 +188,23 @@
 </script>
 
 <svelte:head>
+	<!-- Override only landing page specific meta tags -->
 	<title>SvelteMark - AI Markdown Editor | Privacy-First</title>
 	<meta
 		name="description"
 		content="Privacy-first markdown editor for ChatGPT, Claude, and Gemini content. Mermaid diagrams, math equations, syntax highlighting. Works offline."
 	/>
-	<meta
-		name="keywords"
-		content="markdown editor, AI markdown viewer, ChatGPT markdown, Claude markdown preview, Gemini markdown editor, privacy-first markdown, local markdown editor, offline markdown, Mermaid diagram editor, math equation markdown, LaTeX markdown editor, code syntax highlighting, GitHub flavored markdown"
-	/>
-
-	<!-- Open Graph -->
-	<meta property="og:title" content="SvelteMark - Markdown Editor for AI Content" />
-	<meta
-		property="og:description"
-		content="Privacy-first markdown editor for viewing and editing AI-generated content from ChatGPT, Claude, Gemini, and more. Render Mermaid diagrams, math equations, and code with syntax highlighting."
-	/>
-	<meta property="og:type" content="website" />
-	<meta property="og:url" content="https://sm.fana.my.id/" />
+	
+	<!-- Landing page specific Open Graph image (uses screenshot instead of logo) -->
 	<meta property="og:image" content="https://sm.fana.my.id/screenshot.webp" />
-	<meta property="og:image:width" content="1200" />
-	<meta property="og:image:height" content="630" />
 	<meta property="og:image:alt" content="SvelteMark Editor Interface" />
-	<meta property="og:site_name" content="SvelteMark" />
 	<meta property="og:updated_time" content={data.modifiedDate} />
-
-	<!-- Twitter Card -->
-	<meta name="twitter:card" content="summary_large_image" />
-	<meta name="twitter:title" content="SvelteMark - Markdown Editor for AI Content" />
-	<meta
-		name="twitter:description"
-		content="Privacy-first markdown editor for AI-generated content. Render Mermaid diagrams, math equations, and code."
-	/>
+	
+	<!-- Landing page specific Twitter image -->
 	<meta name="twitter:image" content="https://sm.fana.my.id/screenshot.webp" />
 	<meta name="twitter:image:alt" content="SvelteMark Editor Interface" />
-	<meta name="twitter:site" content="@masfana_" />
-	<meta name="twitter:creator" content="@masfana_" />
-
-	<!-- Canonical URL -->
-	<link rel="canonical" href="https://sm.fana.my.id/" />
-
-	<!-- Additional Meta Tags -->
-	<meta name="google-site-verification" content="your-google-verification-code" />
-	<meta name="rating" content="general" />
-	<meta name="referrer" content="no-referrer-when-downgrade" />
-
-	<!-- Enhanced SEO Meta Tags -->
-	<meta name="distribution" content="global" />
-	<meta name="coverage" content="worldwide" />
-	<meta name="target" content="all" />
-	<meta name="HandheldFriendly" content="true" />
-	<meta name="MobileOptimized" content="width" />
+	
+	<!-- Landing page specific meta -->
 	<meta name="last-modified" content={data.modifiedDate} />
 	<meta name="article:modified_time" content={data.modifiedDate} />
 	<meta name="article:published_time" content={data.publishDate} />

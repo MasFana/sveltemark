@@ -30,9 +30,9 @@
 
 	// SEO Configuration
 	const siteConfig = {
-		title: 'SvelteMark - Privacy-First Markdown Editor for AI Content',
+		title: 'SvelteMark - AI Markdown Editor | Privacy-First',
 		description:
-			'Privacy-first markdown editor for viewing and editing AI-generated content from ChatGPT, Claude, Gemini, and more. Render Mermaid diagrams, math equations (KaTeX/LaTeX), and code with syntax highlighting. Works offline, no cloud, 100% local.',
+			'Privacy-first markdown editor for ChatGPT, Claude, and Gemini content. Mermaid diagrams, math equations, syntax highlighting. Works offline.',
 		url: 'https://sm.fana.my.id',
 		siteName: 'SvelteMark',
 		locale: 'en_US',
@@ -111,7 +111,7 @@
 	<!-- Canonical URL -->
 	<link rel="canonical" href={siteConfig.url} />
 
-	<!-- Structured Data / JSON-LD -->
+	<!-- Base Structured Data / JSON-LD (can be overridden by specific pages) -->
 	{@html `<script type="application/ld+json">${JSON.stringify({
 		'@context': 'https://schema.org',
 		'@type': 'WebApplication',
@@ -130,29 +130,6 @@
 			'@type': 'Person',
 			name: 'MasFana',
 			url: 'https://github.com/MasFana'
-		},
-		publisher: {
-			'@type': 'Person',
-			name: 'MasFana'
-		},
-		softwareVersion: '1.0.0',
-		featureList: [
-			'Privacy-first local storage',
-			'Markdown editing with live preview',
-			'GitHub Flavored Markdown support',
-			'Math equations with KaTeX',
-			'Mermaid diagrams',
-			'Syntax highlighting',
-			'File and folder organization',
-			'Export and import functionality',
-			'Dark theme',
-			'No account required'
-		],
-		screenshot: ogImageUrl,
-		aggregateRating: {
-			'@type': 'AggregateRating',
-			ratingValue: '5',
-			ratingCount: '1'
 		}
 	})}</script>`}
 
