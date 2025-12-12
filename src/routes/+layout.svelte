@@ -30,7 +30,7 @@
 
 	// SEO Configuration
 	const siteConfig = {
-		title: 'Offline in Browser Markdown Viewer & Renderer | SvelteMark',
+		title: 'Offline in Browser Markdown Viewer and Renderer | SvelteMark',
 		description:
 			'Flawlessly render markdown from ChatGPT and Other AI models. Supports Mermaid diagrams, math equations, and syntax highlighting. 100% private, offline & free.',
 		url: 'https://sm.fana.my.id',
