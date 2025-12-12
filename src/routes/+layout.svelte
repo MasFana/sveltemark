@@ -7,11 +7,10 @@
 
 	// Register service worker for offline support
 	onMount(() => {
-		if ('serviceWorker' in navigator) {
+		if ('serviceWorker' in navigator && !dev) {
+			// Only register in production
 			navigator.serviceWorker
-				.register('/service-worker.js', {
-					type: dev ? 'module' : 'classic'
-				})
+				.register('/service-worker.js')
 				.then((registration) => {
 					console.log('SW registered:', registration.scope);
 
@@ -24,7 +23,7 @@
 					); // Check every hour
 				})
 				.catch((error) => {
-					console.log('SW registration failed:', error);
+					console.error('SW registration failed:', error);
 				});
 		}
 	});

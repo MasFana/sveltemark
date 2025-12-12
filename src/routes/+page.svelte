@@ -244,158 +244,152 @@
 	<meta name="article:published_time" content={data.publishDate} />
 
 	<!-- Structured Data (JSON-LD) -->
-	<script type="application/ld+json">
-		{JSON.stringify({
-			"@context": "https://schema.org",
-			"@type": "SoftwareApplication",
-			"name": "SvelteMark",
-			"alternateName": "Svelte Markdown Editor",
-			"url": "https://sm.fana.my.id",
-			"applicationCategory": "ProductivityApplication",
-			"applicationSubCategory": "Markdown Editor",
-			"operatingSystem": ["Windows", "macOS", "Linux", "iOS", "Android"],
-			"browserRequirements": "Requires JavaScript. Requires HTML5.",
-			"offers": {
-				"@type": "Offer",
-				"price": "0",
-				"priceCurrency": "USD",
-				"availability": "https://schema.org/InStock"
-			},
-			"description": "Privacy-first, open-source, local-only markdown editor for viewing and editing AI-generated content from ChatGPT, Claude, Gemini, and more. Supports Mermaid diagrams, math equations (KaTeX/LaTeX), and code syntax highlighting. Works offline as a Progressive Web App.",
-			"featureList": [
-				"AI-generated content support (ChatGPT, Claude, Gemini, DeepSeek, Perplexity, Mistral)",
-				"Mermaid diagram rendering (flowcharts, sequence diagrams, Gantt charts, class diagrams)",
-				"Math equation support (KaTeX/LaTeX)",
-				"Syntax highlighting for 100+ programming languages",
-				"Privacy-first architecture (no cloud, no tracking, no analytics)",
-				"Offline support (Progressive Web App)",
-				"Real-time markdown preview",
-				"GitHub Flavored Markdown support",
-				"File and folder organization",
-				"Export and import functionality",
-				"Dark theme interface",
-				"No account or registration required",
-				"Local storage only",
-				"Copy code to clipboard",
-				"Table of contents generation"
-			],
-			"screenshot": [
-				"https://sm.fana.my.id/screenshot.webp",
-				"https://sm.fana.my.id/preview.webp",
-				"https://sm.fana.my.id/toolbar.webp",
-				"https://sm.fana.my.id/filetree.webp"
-			],
-			"image": "https://sm.fana.my.id/logo.webp",
-			"author": {
-				"@type": "Person",
-				"name": "MasFana",
-				"url": "https://github.com/MasFana"
-			},
-			"creator": {
-				"@type": "Person",
-				"name": "MasFana",
-				"url": "https://github.com/MasFana"
-			},
-			"softwareVersion": data.version,
-			"datePublished": data.publishDate,
-			"dateModified": data.modifiedDate,
-			"aggregateRating": {
-				"@type": "AggregateRating",
-				"ratingValue": "4.9",
-				"ratingCount": "185",
-				"bestRating": "5",
-				"worstRating": "1"
-			},
-			"softwareHelp": {
-				"@type": "WebPage",
-				"url": "https://github.com/MasFana/sveltemark"
-			},
-			"license": "https://opensource.org/licenses/MIT",
-			"codeRepository": "https://github.com/MasFana/sveltemark",
-			"programmingLanguage": ["TypeScript", "Svelte", "JavaScript"],
-			"keywords": "markdown editor, AI markdown viewer, ChatGPT markdown, Claude markdown preview, Gemini markdown editor, privacy-first markdown, local markdown editor, offline markdown editor, Mermaid diagram editor, math equation markdown, LaTeX markdown editor, code syntax highlighting, GitHub flavored markdown, DeepSeek markdown, Perplexity markdown, progressive web app, PWA, local-first, privacy-focused"
-		})}
-	</script>
+	{@html `<script type="application/ld+json">${JSON.stringify({
+		'@context': 'https://schema.org',
+		'@type': 'SoftwareApplication',
+		name: 'SvelteMark',
+		alternateName: 'Svelte Markdown Editor',
+		url: 'https://sm.fana.my.id',
+		applicationCategory: 'ProductivityApplication',
+		applicationSubCategory: 'Markdown Editor',
+		operatingSystem: ['Windows', 'macOS', 'Linux', 'iOS', 'Android'],
+		browserRequirements: 'Requires JavaScript. Requires HTML5.',
+		offers: {
+			'@type': 'Offer',
+			price: '0',
+			priceCurrency: 'USD',
+			availability: 'https://schema.org/InStock'
+		},
+		description: 'Privacy-first, open-source, local-only markdown editor for viewing and editing AI-generated content from ChatGPT, Claude, Gemini, and more. Supports Mermaid diagrams, math equations (KaTeX/LaTeX), and code syntax highlighting. Works offline as a Progressive Web App.',
+		featureList: [
+			'AI-generated content support (ChatGPT, Claude, Gemini, DeepSeek, Perplexity, Mistral)',
+			'Mermaid diagram rendering (flowcharts, sequence diagrams, Gantt charts, class diagrams)',
+			'Math equation support (KaTeX/LaTeX)',
+			'Syntax highlighting for 100+ programming languages',
+			'Privacy-first architecture (no cloud, no tracking, no analytics)',
+			'Offline support (Progressive Web App)',
+			'Real-time markdown preview',
+			'GitHub Flavored Markdown support',
+			'File and folder organization',
+			'Export and import functionality',
+			'Dark theme interface',
+			'No account or registration required',
+			'Local storage only',
+			'Copy code to clipboard',
+			'Table of contents generation'
+		],
+		screenshot: [
+			'https://sm.fana.my.id/screenshot.webp',
+			'https://sm.fana.my.id/preview.webp',
+			'https://sm.fana.my.id/toolbar.webp',
+			'https://sm.fana.my.id/filetree.webp'
+		],
+		image: 'https://sm.fana.my.id/logo.webp',
+		author: {
+			'@type': 'Person',
+			name: 'MasFana',
+			url: 'https://github.com/MasFana'
+		},
+		creator: {
+			'@type': 'Person',
+			name: 'MasFana',
+			url: 'https://github.com/MasFana'
+		},
+		softwareVersion: data.version,
+		datePublished: data.publishDate,
+		dateModified: data.modifiedDate,
+		aggregateRating: {
+			'@type': 'AggregateRating',
+			ratingValue: '4.9',
+			ratingCount: '185',
+			bestRating: '5',
+			worstRating: '1'
+		},
+		softwareHelp: {
+			'@type': 'WebPage',
+			url: 'https://github.com/MasFana/sveltemark'
+		},
+		license: 'https://opensource.org/licenses/MIT',
+		codeRepository: 'https://github.com/MasFana/sveltemark',
+		programmingLanguage: ['TypeScript', 'Svelte', 'JavaScript'],
+		keywords: 'markdown editor, AI markdown viewer, ChatGPT markdown, Claude markdown preview, Gemini markdown editor, privacy-first markdown, local markdown editor, offline markdown editor, Mermaid diagram editor, math equation markdown, LaTeX markdown editor, code syntax highlighting, GitHub flavored markdown, DeepSeek markdown, Perplexity markdown, progressive web app, PWA, local-first, privacy-focused'
+	})}</script>`}
 
 	<!-- Breadcrumb Structured Data -->
-	<script type="application/ld+json">
-		{JSON.stringify({
-			"@context": "https://schema.org",
-			"@type": "BreadcrumbList",
-			"itemListElement": [
-				{
-					"@type": "ListItem",
-					"position": 1,
-					"name": "Home",
-					"item": "https://sm.fana.my.id/"
-				},
-				{
-					"@type": "ListItem",
-					"position": 2,
-					"name": "Editor",
-					"item": "https://sm.fana.my.id/app"
-				}
-			]
-		})}
-	</script>
+	{@html `<script type="application/ld+json">${JSON.stringify({
+		'@context': 'https://schema.org',
+		'@type': 'BreadcrumbList',
+		itemListElement: [
+			{
+				'@type': 'ListItem',
+				position: 1,
+				name: 'Home',
+				item: 'https://sm.fana.my.id/'
+			},
+			{
+				'@type': 'ListItem',
+				position: 2,
+				name: 'Editor',
+				item: 'https://sm.fana.my.id/app'
+			}
+		]
+	})}</script>`}
 
 	<!-- FAQ Structured Data -->
-	<script type="application/ld+json">
-		{JSON.stringify({
-			"@context": "https://schema.org",
-			"@type": "FAQPage",
-			"mainEntity": [
-				{
-					"@type": "Question",
-					"name": "Is SvelteMark free to use?",
-					"acceptedAnswer": {
-						"@type": "Answer",
-						"text": "Yes, SvelteMark is completely free and open-source under the MIT License. There are no subscriptions, no premium features, and no hidden costs."
-					}
-				},
-				{
-					"@type": "Question",
-					"name": "Does SvelteMark work offline?",
-					"acceptedAnswer": {
-						"@type": "Answer",
-						"text": "Yes! SvelteMark is a Progressive Web App (PWA) that works completely offline. Once loaded, you can use all features without an internet connection. Your data is stored locally on your device."
-					}
-				},
-				{
-					"@type": "Question",
-					"name": "Is my data private and secure?",
-					"acceptedAnswer": {
-						"@type": "Answer",
-						"text": "Absolutely. SvelteMark runs entirely in your browser. Your documents never leave your device - there's no cloud storage, no tracking, no analytics, and no account required. Your privacy is guaranteed by design."
-					}
-				},
-				{
-					"@type": "Question",
-					"name": "Can I use SvelteMark with AI-generated content?",
-					"acceptedAnswer": {
-						"@type": "Answer",
-						"text": "Yes! SvelteMark is perfect for viewing and editing markdown from ChatGPT, Claude, Gemini, DeepSeek, Perplexity, and other AI models. It supports Mermaid diagrams, math equations, code highlighting, and all GitHub Flavored Markdown features."
-					}
-				},
-				{
-					"@type": "Question",
-					"name": "What platforms does SvelteMark support?",
-					"acceptedAnswer": {
-						"@type": "Answer",
-						"text": "SvelteMark works on any modern web browser across Windows, macOS, Linux, iOS, and Android. You can install it as a Progressive Web App on mobile devices and desktop computers for a native-like experience."
-					}
-				},
-				{
-					"@type": "Question",
-					"name": "Does SvelteMark support Mermaid diagrams?",
-					"acceptedAnswer": {
-						"@type": "Answer",
-						"text": "Yes! SvelteMark has built-in support for Mermaid diagrams including flowcharts, sequence diagrams, Gantt charts, class diagrams, and more. Simply paste your Mermaid code and see it rendered instantly."
-					}
+	{@html `<script type="application/ld+json">${JSON.stringify({
+		'@context': 'https://schema.org',
+		'@type': 'FAQPage',
+		mainEntity: [
+			{
+				'@type': 'Question',
+				name: 'Is SvelteMark free to use?',
+				acceptedAnswer: {
+					'@type': 'Answer',
+					text: 'Yes, SvelteMark is completely free and open-source under the MIT License. There are no subscriptions, no premium features, and no hidden costs.'
 				}
-			]
-		})}
-	</script>
+			},
+			{
+				'@type': 'Question',
+				name: 'Does SvelteMark work offline?',
+				acceptedAnswer: {
+					'@type': 'Answer',
+					text: 'Yes! SvelteMark is a Progressive Web App (PWA) that works completely offline. Once loaded, you can use all features without an internet connection. Your data is stored locally on your device.'
+				}
+			},
+			{
+				'@type': 'Question',
+				name: 'Is my data private and secure?',
+				acceptedAnswer: {
+					'@type': 'Answer',
+					text: 'Absolutely. SvelteMark runs entirely in your browser. Your documents never leave your device - there\'s no cloud storage, no tracking, no analytics, and no account required. Your privacy is guaranteed by design.'
+				}
+			},
+			{
+				'@type': 'Question',
+				name: 'Can I use SvelteMark with AI-generated content?',
+				acceptedAnswer: {
+					'@type': 'Answer',
+					text: 'Yes! SvelteMark is perfect for viewing and editing markdown from ChatGPT, Claude, Gemini, DeepSeek, Perplexity, and other AI models. It supports Mermaid diagrams, math equations, code highlighting, and all GitHub Flavored Markdown features.'
+				}
+			},
+			{
+				'@type': 'Question',
+				name: 'What platforms does SvelteMark support?',
+				acceptedAnswer: {
+					'@type': 'Answer',
+					text: 'SvelteMark works on any modern web browser across Windows, macOS, Linux, iOS, and Android. You can install it as a Progressive Web App on mobile devices and desktop computers for a native-like experience.'
+				}
+			},
+			{
+				'@type': 'Question',
+				name: 'Does SvelteMark support Mermaid diagrams?',
+				acceptedAnswer: {
+					'@type': 'Answer',
+					text: 'Yes! SvelteMark has built-in support for Mermaid diagrams including flowcharts, sequence diagrams, Gantt charts, class diagrams, and more. Simply paste your Mermaid code and see it rendered instantly.'
+				}
+			}
+		]
+	})}</script>`}
 </svelte:head>
 
 <div class="scroll-progress-container">
