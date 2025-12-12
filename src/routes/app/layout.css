@@ -1,0 +1,16 @@
+/* App route specific layout - full height for editor */
+/* Scope overflow:hidden only when .app container exists (app route) */
+html:has(.app),
+body:has(.app) {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+}
+
+/* Ensure the app container takes full height */
+.app {
+    height: 100%;
+    width: 100%;
+}

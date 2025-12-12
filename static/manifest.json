@@ -1,15 +1,18 @@
 {
-	"name": "SvelteMark - Privacy-First Markdown Editor",
+	"name": "SvelteMark - Privacy-First Markdown Editor for AI Content",
 	"short_name": "SvelteMark",
-	"description": "A privacy-first, open-source, local-only markdown editor built with Svelte 5. Your notes never leave your device.",
-	"start_url": "/",
+	"description": "Privacy-first markdown editor for AI-generated content from ChatGPT, Claude, Gemini. Supports Mermaid diagrams, math equations, and code highlighting. 100% local, works offline.",
+	"start_url": "/app",
 	"display": "standalone",
-	"background_color": "#0d1117",
-	"theme_color": "#0d1117",
+	"display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+	"background_color": "#1a1a1a",
+	"theme_color": "#161b22",
 	"orientation": "any",
 	"scope": "/",
 	"lang": "en",
-	"categories": ["productivity", "utilities", "education"],
+	"dir": "ltr",
+	"categories": ["productivity", "utilities", "education", "developer tools"],
+	"iarc_rating_id": "",
 	"icons": [
 		{
 			"src": "/favicon.svg",
@@ -26,13 +29,57 @@
 	],
 	"screenshots": [
 		{
-			"src": "/logo.webp",
+			"src": "/screenshot.webp",
 			"sizes": "1200x630",
 			"type": "image/webp",
 			"form_factor": "wide",
-			"label": "SvelteMark Editor"
+			"label": "SvelteMark Editor - Main Interface"
+		},
+		{
+			"src": "/preview.webp",
+			"sizes": "800x600",
+			"type": "image/webp",
+			"form_factor": "wide",
+			"label": "Real-time Markdown Preview"
+		},
+		{
+			"src": "/toolbar.webp",
+			"sizes": "800x600",
+			"type": "image/webp",
+			"form_factor": "wide",
+			"label": "Rich Formatting Toolbar"
+		},
+		{
+			"src": "/filetree.webp",
+			"sizes": "800x600",
+			"type": "image/webp",
+			"form_factor": "wide",
+			"label": "File Organization"
+		}
+	],
+	"shortcuts": [
+		{
+			"name": "New Document",
+			"short_name": "New",
+			"description": "Create a new markdown document",
+			"url": "/app",
+			"icons": [
+				{
+					"src": "/favicon.svg",
+					"sizes": "96x96"
+				}
+			]
 		}
 	],
 	"related_applications": [],
-	"prefer_related_applications": false
+	"prefer_related_applications": false,
+	"share_target": {
+		"action": "/app",
+		"method": "GET",
+		"enctype": "application/x-www-form-urlencoded",
+		"params": {
+			"title": "title",
+			"text": "text"
+		}
+	}
 }

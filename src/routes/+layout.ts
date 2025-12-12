@@ -1,8 +1,8 @@
-// Enable prerendering for static site generation
-export const prerender = true;
-
-// Allow client-side rendering for the app
+// Enable SSR for SEO (pages are rendered on each request)
 export const ssr = true;
 
-// Use client-side navigation
+// Enable client-side rendering for SPA-like navigation after initial load
 export const csr = true;
+
+// Trailing slash handling for better URL consistency
+export const trailingSlash = 'ignore';

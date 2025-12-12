@@ -38,12 +38,18 @@ self.addEventListener('install', (event) => {
             })
         );
 
-        // Also explicitly cache the root for navigation fallback
+        // Also explicitly cache the root and app routes for navigation fallback
         try {
             const indexResponse = await fetch('/');
             if (indexResponse.ok) {
                 await cache.put('/', indexResponse.clone());
                 await cache.put('/index.html', indexResponse.clone());
+            }
+
+            // Cache the /app route as well for proper offline support
+            const appResponse = await fetch('/app');
+            if (appResponse.ok) {
+                await cache.put('/app', appResponse.clone());
             }
         } catch {
             // Ignore fetch errors during install
@@ -88,13 +94,21 @@ self.addEventListener('fetch', (event) => {
 
         // For navigation requests (HTML pages), use cache-first with network fallback
         if (event.request.mode === 'navigate') {
-            // Try to serve the prerendered index.html from cache first
-            const cachedResponse = await cache.match('/');
+            // First try exact match
+            let cachedResponse = await cache.match(event.request);
+
+            // If no exact match, try the URL pathname
+            if (!cachedResponse) {
+                cachedResponse = await cache.match(url.pathname);
+            }
+
+            // If we have a cached response, return it and update in background
             if (cachedResponse) {
                 // Also try to update in background (stale-while-revalidate)
                 fetch(event.request).then(response => {
                     if (response.status === 200) {
                         cache.put(event.request, response.clone());
+                        cache.put(url.pathname, response.clone());
                     }
                 }).catch(() => {/* ignore network errors */ });
                 return cachedResponse;
@@ -124,8 +138,16 @@ self.addEventListener('fetch', (event) => {
                 return cachedResponse;
             }
 
-            // For navigation requests, return cached index page as fallback
+            // For navigation requests, return cached page as fallback
             if (event.request.mode === 'navigate') {
+                // Try to match the exact pathname first
+                const pathname = url.pathname;
+                const pathnameResponse = await cache.match(pathname);
+                if (pathnameResponse) {
+                    return pathnameResponse;
+                }
+
+                // Fall back to root if no specific route is cached
                 const indexResponse = await cache.match('/');
                 if (indexResponse) {
                     return indexResponse;

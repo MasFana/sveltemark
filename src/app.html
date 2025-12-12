@@ -5,6 +5,13 @@
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
 	<style>
+		/* CSS Reset */
+		*,
+		*::before,
+		*::after {
+			box-sizing: border-box;
+		}
+
 		/* Prevent white flash during load */
 		html,
 		body {
@@ -12,6 +19,8 @@
 			color: #e6edf3;
 			margin: 0;
 			padding: 0;
+			/* Fallback font to prevent layout shift */
+			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 		}
 	</style>
 	%sveltekit.head%

@@ -8,16 +8,20 @@
 	// Register service worker for offline support
 	onMount(() => {
 		if ('serviceWorker' in navigator) {
-			navigator.serviceWorker.register('/service-worker.js', {
-				type: dev ? 'module' : 'classic'
-			})
+			navigator.serviceWorker
+				.register('/service-worker.js', {
+					type: dev ? 'module' : 'classic'
+				})
 				.then((registration) => {
 					console.log('SW registered:', registration.scope);
-					
+
 					// Check for updates periodically
-					setInterval(() => {
-						registration.update();
-					}, 60 * 60 * 1000); // Check every hour
+					setInterval(
+						() => {
+							registration.update();
+						},
+						60 * 60 * 1000
+					); // Check every hour
 				})
 				.catch((error) => {
 					console.log('SW registration failed:', error);
@@ -27,30 +31,31 @@
 
 	// SEO Configuration
 	const siteConfig = {
-		title: 'SvelteMark - Privacy-First Markdown Editor',
+		title: 'SvelteMark - Privacy-First Markdown Editor for AI Content',
 		description:
-			'A privacy-first, open-source, local-only markdown editor built with Svelte 5. Your notes never leave your device. No accounts, no tracking, no cloud.',
+			'Privacy-first markdown editor for viewing and editing AI-generated content from ChatGPT, Claude, Gemini, and more. Render Mermaid diagrams, math equations (KaTeX/LaTeX), and code with syntax highlighting. Works offline, no cloud, 100% local.',
 		url: 'https://sm.fana.my.id',
 		siteName: 'SvelteMark',
 		locale: 'en_US',
 		type: 'website',
 		twitterHandle: '@masfana_',
-		themeColor: '#0d1117',
+		themeColor: '#161b22',
 		keywords: [
 			'markdown editor',
-			'privacy-first',
-			'local-first',
-			'open-source',
-			'svelte',
-			'note taking',
-			'offline editor',
-			'no cloud',
-			'private notes',
-			'markdown preview',
-			'codemirror',
-			'mermaid diagrams',
-			'katex math',
-			'github flavored markdown'
+			'AI markdown viewer',
+			'ChatGPT markdown',
+			'Claude markdown preview',
+			'Gemini markdown editor',
+			'privacy-first markdown',
+			'local markdown editor',
+			'offline markdown editor',
+			'Mermaid diagram editor',
+			'math equation markdown',
+			'LaTeX markdown editor',
+			'code syntax highlighting',
+			'GitHub flavored markdown',
+			'DeepSeek markdown',
+			'Perplexity markdown'
 		]
 	};
 
@@ -160,7 +165,17 @@
 	<!-- Preconnect for performance -->
 	<link rel="preconnect" href="https://fonts.googleapis.com" />
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
-	<link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+
+	<!-- Google Fonts - Non-render-blocking -->
+	{@html `<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" media="print" onload="this.media='all'">`}
+	<noscript>
+		<link
+			rel="stylesheet"
+			href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+		/>
+	</noscript>
 </svelte:head>
 
-{@render children()}
+<main>
+	{@render children()}
+</main>

@@ -1,12 +1,15 @@
-# SvelteMark - Privacy-First Markdown Editor
-# https://sveltemark.fana.my.id
+# SvelteMark - Privacy-First Markdown Editor for AI-Generated Content
+# https://sm.fana.my.id
 
-# Allow all crawlers
+# Allow all crawlers to index landing page
 User-agent: *
 Allow: /
 
-# Sitemap
-Sitemap: https://sveltemark.fana.my.id/sitemap.xml
+# Don't index the app editor (it's a tool, not content)
+Disallow: /app/
 
-# Crawl delay (optional, be nice to servers)
+# Sitemap location
+Sitemap: https://sm.fana.my.id/sitemap.xml
+
+# Crawl delay (be nice to servers)
 Crawl-delay: 1
