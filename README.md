@@ -12,6 +12,12 @@ Your notes never leave your device. No accounts. No tracking. No cloud.
 [![License](https://img.shields.io/badge/License-MIT-3fb950?style=for-the-badge)](LICENSE)
 [![Svelte](https://img.shields.io/badge/Svelte-5-ff3e00?style=for-the-badge&logo=svelte&logoColor=white)](https://svelte.dev/)
 
+<!-- PASTE YOUR EMBED HERE -->
+<a href="https://peerpush.net/p/sveltemark-privacy-first-markdown-edit" target="_blank" rel="noopener">
+  <img src="https://peerpush.net/p/sveltemark-privacy-first-markdown-edit/badge.png" alt="SvelteMark - Privacy-First Markdown Edit badge" style="width: 230px;" />
+</a>
+<!-- END PASTE -->
+
 </div>
 
 ---
